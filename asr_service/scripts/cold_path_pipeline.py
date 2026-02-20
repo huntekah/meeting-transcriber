@@ -23,12 +23,17 @@ from typing import Dict, List, Any, Optional
 import time
 import warnings
 
+# Suppress known harmless warnings BEFORE importing libraries
+warnings.filterwarnings("ignore", category=FutureWarning)
+warnings.filterwarnings("ignore", message=".*torchcodec is not installed correctly.*")
+warnings.filterwarnings("ignore", message=".*torchaudio.load_with_torchcodec.*")
+warnings.filterwarnings("ignore", category=UserWarning, module="pyannote.audio.core.io")
+warnings.filterwarnings("ignore", category=UserWarning, module="torchaudio._backend.utils")
+
 import torch
 import whisperx
 from faster_whisper import WhisperModel
 from pyannote.audio import Pipeline as DiarizationPipeline
-
-warnings.filterwarnings("ignore", category=FutureWarning)
 
 
 class Timer:
