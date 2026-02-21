@@ -2,6 +2,51 @@
 
 This directory contains experimental scripts for testing and debugging the ASR pipeline.
 
+**📋 See [SCRIPT_COMPARISON.md](SCRIPT_COMPARISON.md) for detailed comparison of all scripts**
+
+---
+
+## Live Streaming Scripts (Real-Time)
+
+### `live_test.py` - Real-time transcription with faster-whisper
+Real-time microphone transcription with VAD-based sentence detection and context chaining.
+
+**Usage:**
+```bash
+python live_test.py
+# Speak into microphone
+# Press ENTER to stop
+```
+
+**Features:**
+- 💬 Provisional updates every 300ms while speaking
+- ✅ Finalized transcription after pauses (~480ms silence)
+- 🔗 Context chaining (last 50 words)
+- 📊 Session statistics on exit
+
+**Performance:** RTF 0.86x (faster than real-time)
+
+### `live_test_v2.py` - Real-time transcription with mlx-whisper
+Same as v1 but uses MLX for native M4 Metal acceleration (2x faster).
+
+**Usage:**
+```bash
+python live_test_v2.py
+# Speak into microphone
+# Press ENTER to stop
+```
+
+**Features:**
+- ⚡ 2x faster than v1 (RTF 0.46x)
+- 🚀 Instant model loading (<1s)
+- ❌ No context chaining (causes hallucinations in MLX)
+
+**Note:** Use v1 if cross-sentence context is important, v2 for maximum speed.
+
+---
+
+## Cold Path Scripts (Batch Processing)
+
 ## Interactive Testing Script
 
 `interactive_test.py` - Test the Cold Path pipeline with different inputs:
