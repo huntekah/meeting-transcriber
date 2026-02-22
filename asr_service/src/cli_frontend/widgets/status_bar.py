@@ -13,8 +13,8 @@ import asyncio
 class StatusBar(Static):
     """Status bar with recording indicator and timer."""
 
-    def __init__(self):
-        super().__init__()
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
         self.is_recording = False
         self.start_time = None
         self._timer_running = False

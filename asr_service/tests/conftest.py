@@ -3,7 +3,6 @@ from pathlib import Path
 from httpx import AsyncClient, ASGITransport
 from starlette.testclient import TestClient
 from asr_service.main import app
-from asr_service.services.model_loader import ASREngine
 
 
 @pytest.fixture(scope="session")
@@ -18,17 +17,8 @@ def expected_transcription():
     return "This is a test that we will use to check ASR"
 
 
-@pytest.fixture(scope="session")
-def loaded_model():
-    """Ensure the model is loaded once for all tests."""
-    engine = ASREngine()
-    if not engine.is_loaded:
-        engine.load_model()
-    return engine
-
-
 @pytest.fixture
-async def async_client(loaded_model):
+async def async_client():
     """Async HTTP client for testing FastAPI endpoints."""
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as client:
@@ -36,7 +26,7 @@ async def async_client(loaded_model):
 
 
 @pytest.fixture
-def sync_client(loaded_model):
+def sync_client():
     """Synchronous test client for WebSocket testing."""
     with TestClient(app) as client:
         yield client

@@ -12,13 +12,14 @@ from ..models import Utterance
 class TranscriptView(RichLog):
     """Live transcript view with auto-scroll."""
 
-    def __init__(self):
+    def __init__(self, **kwargs):
         super().__init__(
             highlight=True,
             markup=True,
             auto_scroll=True,
             max_lines=1000,
             wrap=True,
+            **kwargs,
         )
         self.utterances = []
 

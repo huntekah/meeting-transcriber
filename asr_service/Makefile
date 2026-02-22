@@ -1,15 +1,18 @@
-.PHONY: help install run dev run-cli test clean lint format
+.PHONY: help install run dev run-cli test test-coverage test-backend test-frontend clean lint format
 
 help:
 	@echo "Available commands:"
-	@echo "  make install    - Install dependencies using uv"
-	@echo "  make run        - Start the ASR service"
-	@echo "  make dev        - Start with auto-reload (development mode)"
-	@echo "  make run-cli    - Start the CLI frontend"
-	@echo "  make test       - Run tests"
-	@echo "  make lint       - Run code linters"
-	@echo "  make format     - Format code"
-	@echo "  make clean      - Clean temporary files"
+	@echo "  make install       - Install dependencies using uv"
+	@echo "  make run           - Start the ASR service"
+	@echo "  make dev           - Start with auto-reload (development mode)"
+	@echo "  make run-cli       - Start the CLI frontend"
+	@echo "  make test          - Run all tests"
+	@echo "  make test-coverage - Run tests with coverage report"
+	@echo "  make test-backend  - Run backend tests only"
+	@echo "  make test-frontend - Run frontend tests only"
+	@echo "  make lint          - Run code linters"
+	@echo "  make format        - Format code"
+	@echo "  make clean         - Clean temporary files"
 
 install:
 	uv sync
@@ -24,7 +27,17 @@ run-cli:
 	cd src && uv run --group cli python -m cli_frontend
 
 test:
-	uv run pytest
+	uv run --all-groups pytest
+
+test-coverage:
+	uv run --all-groups pytest --cov=src/asr_service --cov=src/cli_frontend --cov-report=html --cov-report=term
+	@echo "Coverage report generated in htmlcov/index.html"
+
+test-backend:
+	uv run pytest tests/backend/ -v
+
+test-frontend:
+	uv run --group cli pytest tests/frontend/ -v
 
 lint:
 	uv run ruff check src/
