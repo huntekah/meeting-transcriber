@@ -1,11 +1,13 @@
 #!/usr/bin/env python3
 """
-Interactive testing script for ASR pipeline.
+Interactive testing script for ASR pipeline (MLX Version).
+
+Uses MLX-Whisper for native M4 Metal acceleration (2x faster than CPU).
 
 Usage:
-    python interactive_test.py --minutes 1     # Test first 1 minute of video
-    python interactive_test.py --minutes 5     # Test first 5 minutes of video
-    python interactive_test.py --mic           # Record from microphone and transcribe
+    python interactive_test_v2.py --minutes 1     # Test first 1 minute of video
+    python interactive_test_v2.py --minutes 5     # Test first 5 minutes of video
+    python interactive_test_v2.py --mic           # Record from microphone and transcribe
 """
 import argparse
 import sys
@@ -112,21 +114,20 @@ def record_from_microphone(output_path: Path, sample_rate: int = 16000):
 
 def transcribe_with_cold_path(audio_path: Path, use_diarization: bool = False):
     """
-    Transcribe audio using Cold Path approach:
+    Transcribe audio using Cold Path approach (MLX Version):
     1. Diarization (Pyannote) - optional
-    2. VAD (Silero via faster-whisper)
-    3. ASR (Whisper)
-    4. Alignment (WhisperX) - optional
+    2. ASR (MLX-Whisper with Metal acceleration)
+    3. Alignment (WhisperX) - optional
     """
     import os
-    from cold_path_pipeline import ColdPathPipeline
+    from cold_path_pipeline_v2 import ColdPathPipeline_MLX
 
     # Get HF token from environment (needed for diarization)
     hf_token = os.getenv("HF_TOKEN")
 
     # Create pipeline using settings from config
-    pipeline = ColdPathPipeline(
-        whisper_model=config.WHISPER_MODEL,
+    pipeline = ColdPathPipeline_MLX(
+        whisper_model=config.MLX_WHISPER_MODEL,
         diarization_model=config.DIARIZATION_MODEL,
         use_diarization=use_diarization,
         hf_token=hf_token,
@@ -151,7 +152,7 @@ def transcribe_with_cold_path(audio_path: Path, use_diarization: bool = False):
 def test_minutes(minutes: int, use_diarization: bool = True):
     """Test transcription on first n minutes of video."""
     print(f"\n{'='*60}")
-    print(f"Testing first {minutes} minute(s) of video")
+    print(f"Testing first {minutes} minute(s) of video (MLX-Whisper)")
     if use_diarization:
         print("With speaker diarization enabled")
     print(f"{'='*60}\n")
@@ -172,14 +173,14 @@ def test_minutes(minutes: int, use_diarization: bool = True):
 def test_microphone():
     """Test transcription on microphone input."""
     print(f"\n{'='*60}")
-    print("Microphone Recording Test")
+    print("Microphone Recording Test (MLX-Whisper)")
     print(f"{'='*60}\n")
 
     output_path = Path(__file__).parent.parent / "data" / "mic_recording.wav"
 
     # Start model loading in background
     import os
-    from cold_path_pipeline import ColdPathPipeline
+    from cold_path_pipeline_v2 import ColdPathPipeline_MLX
 
     model_loaded = threading.Event()
     model_container = {}
@@ -187,8 +188,8 @@ def test_microphone():
     def load_model():
         hf_token = os.getenv("HF_TOKEN")
         with Timer("Loading Cold Path pipeline (background)"):
-            model_container['pipeline'] = ColdPathPipeline(
-                whisper_model=config.WHISPER_MODEL,
+            model_container['pipeline'] = ColdPathPipeline_MLX(
+                whisper_model=config.MLX_WHISPER_MODEL,
                 use_diarization=False,  # Disable for mic test
                 hf_token=hf_token,
                 verbose=False
@@ -211,7 +212,7 @@ def test_microphone():
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Interactive ASR testing script")
+    parser = argparse.ArgumentParser(description="Interactive ASR testing script (MLX)")
     group = parser.add_mutually_exclusive_group(required=True)
     group.add_argument("--minutes", type=int, help="Test first N minutes of video")
     group.add_argument("--mic", action="store_true", help="Record from microphone")

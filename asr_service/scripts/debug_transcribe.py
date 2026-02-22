@@ -4,11 +4,10 @@ import sys
 sys.path.insert(0, 'src')
 
 from asr_service.services.model_loader import ASREngine
-from asr_service.services.audio_processor import AudioProcessor
 import json
 
 def debug_transcribe(audio_file):
-    print(f"Loading ASR engine...")
+    print("Loading ASR engine...")
     engine = ASREngine()
     if not engine.is_loaded:
         engine.load_model()
@@ -18,10 +17,10 @@ def debug_transcribe(audio_file):
     # Get the full result with all metadata
     result = engine.transcribe_final(audio_file)
 
-    print(f"\n=== Full Result ===")
+    print("\n=== Full Result ===")
     print(json.dumps(result, indent=2, default=str))
 
-    print(f"\n=== Text Only ===")
+    print("\n=== Text Only ===")
     print(result['text'])
 
     if 'chunks' in result:

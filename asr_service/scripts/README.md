@@ -47,6 +47,24 @@ python live_test_v2.py
 
 ## Cold Path Scripts (Batch Processing)
 
+### `interactive_test.py` - Batch transcription with faster-whisper
+Test the Cold Path pipeline with complete audio files using faster-whisper (CPU).
+
+**Features:**
+- ⚡ Parallel diarization + transcription
+- 🎯 Full accuracy with context preservation
+- 🔧 Configurable from `.env`
+
+### `interactive_test_v2.py` - Batch transcription with mlx-whisper
+Same as v1 but uses MLX for native M4 Metal acceleration (**2x faster**).
+
+**Features:**
+- ⚡⚡ Parallel diarization + transcription (MLX Metal)
+- 🚀 ~8x faster than original cold path
+- ⚠️ No context chaining (MLX limitation)
+
+---
+
 ## Interactive Testing Script
 
 `interactive_test.py` - Test the Cold Path pipeline with different inputs:
@@ -140,11 +158,39 @@ pipeline = ColdPathPipeline(
 )
 ```
 
-## Legacy Scripts
+## Configuration
 
-- `test_mlx_whisper.py` - MLX-Whisper testing (replaced by faster-whisper)
-- `debug_transcribe.py` - Original debug script
-- `transcribe_file.py` - Simple HTTP API test script
+All scripts now use **unified configuration** from `.env`:
+
+```bash
+# Whisper Models
+WHISPER_MODEL=large-v3-turbo  # For faster-whisper
+MLX_WHISPER_MODEL=mlx-community/whisper-large-v3-turbo  # For mlx-whisper
+
+# Diarization
+DIARIZATION_MODEL=pyannote/speaker-diarization-3.1
+HF_TOKEN=your_token_here
+
+# Performance
+COLD_PATH_PARALLEL_WORKERS=4  # Number of parallel transcription workers
+```
+
+Configuration is managed by `scripts/config.py` - no more hardcoded model names!
+
+---
+
+## Performance Improvements
+
+### Cold Path Optimization
+Both `cold_path_pipeline.py` and `cold_path_pipeline_v2.py` now include:
+- **Parallel Diarization + Transcription**: Run simultaneously (~50% faster)
+- **Configurable from .env**: Easy to switch models without code changes
+
+**Expected Performance:**
+- `interactive_test.py` (faster-whisper): ~4x faster than original
+- `interactive_test_v2.py` (mlx-whisper): ~8x faster than original
+
+---
 
 ## Notes
 
@@ -152,3 +198,4 @@ pipeline = ColdPathPipeline(
 - Temporary segments created during testing are auto-cleaned
 - The torchcodec warnings are harmless (optional Pyannote dependencies)
 - Faster-whisper doesn't support MPS, automatically falls back to CPU
+- MLX-Whisper does NOT support context chaining (causes hallucinations)

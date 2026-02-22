@@ -39,6 +39,9 @@ load_dotenv(dotenv_path=env_path)
 # Add src to path
 sys.path.insert(0, str(Path(__file__).parent.parent / 'src'))
 
+# Import unified config
+from config import config
+
 
 # ==============================================================================
 # Configuration
@@ -333,7 +336,7 @@ def main():
     # Load models
     print("Loading models...\n")
     vad_model = load_vad_model()
-    whisper_model = load_whisper_model("large-v3-turbo")
+    whisper_model = load_whisper_model(config.WHISPER_MODEL)
 
     print("\n✓ Models loaded successfully!\n")
     print("Press ENTER to stop recording\n")
@@ -405,7 +408,7 @@ def main():
         # RTF < 1.0 means faster than real-time (good for streaming)
         rtf = state['stats']['total_transcription_time'] / session_duration
         print(f"Real-time factor (RTF):   {rtf:.2f}x")
-        print(f"  (RTF < 1.0 = faster than real-time)")
+        print("  (RTF < 1.0 = faster than real-time)")
 
     print("="*60 + "\n")
     print("✓ Done\n")

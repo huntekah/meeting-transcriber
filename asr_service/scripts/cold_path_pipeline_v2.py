@@ -1,17 +1,18 @@
 #!/usr/bin/env python3
 """
-Cold Path Pipeline for High-Accuracy Transcription
+Cold Path Pipeline for High-Accuracy Transcription (MLX Version)
 
 This pipeline implements:
 1. Speaker Diarization (Pyannote.audio 3.1+)
-2. Voice Activity Detection (Silero VAD via faster-whisper)
-3. ASR Transcription (Whisper large-v3-turbo)
-4. Word-level Alignment (WhisperX)
+2. ASR Transcription (MLX-Whisper large-v3-turbo with Metal acceleration)
+3. Word-level Alignment (WhisperX)
+
+Note: MLX version does NOT support context chaining via initial_prompt (causes hallucinations)
 
 Usage:
-    from cold_path_pipeline import ColdPathPipeline
+    from cold_path_pipeline_v2 import ColdPathPipeline_MLX
 
-    pipeline = ColdPathPipeline()
+    pipeline = ColdPathPipeline_MLX()
     result = pipeline.process("audio.mp3")
 
     for segment in result['segments']:
@@ -23,6 +24,8 @@ from typing import Dict, Any, Optional
 import time
 import warnings
 import concurrent.futures
+import os
+import contextlib
 
 # Suppress known harmless warnings BEFORE importing libraries
 warnings.filterwarnings("ignore", category=FutureWarning)
@@ -33,7 +36,8 @@ warnings.filterwarnings("ignore", category=UserWarning, module="torchaudio._back
 
 import torch
 import whisperx
-from faster_whisper import WhisperModel
+import mlx_whisper
+import soundfile as sf
 from pyannote.audio import Pipeline as DiarizationPipeline
 
 
@@ -57,43 +61,43 @@ class Timer:
             print(f" ✓ ({self.elapsed:.2f}s)")
 
 
-class ColdPathPipeline:
+class ColdPathPipeline_MLX:
     """
-    High-accuracy transcription pipeline for post-meeting processing.
+    High-accuracy transcription pipeline for post-meeting processing using MLX.
 
-    This pipeline sacrifices speed for accuracy, using:
+    This pipeline uses MLX-Whisper for native M4 Metal acceleration:
     - Pyannote for robust speaker diarization
-    - Silero VAD to strip silence
-    - Whisper large-v3-turbo for fast, accurate transcription
+    - MLX-Whisper large-v3-turbo for fast, accurate transcription
     - WhisperX for word-level alignment with diarization
+
+    Note: Does NOT support context chaining (causes hallucinations in MLX)
     """
 
     def __init__(
         self,
-        whisper_model: str = "large-v3-turbo",
+        whisper_model: str = "mlx-community/whisper-large-v3-turbo",
         diarization_model: str = "pyannote/speaker-diarization-3.1",
         device: Optional[str] = None,
-        compute_type: str = "float32",
         use_diarization: bool = True,
         hf_token: Optional[str] = None,
         verbose: bool = True
     ):
         """
-        Initialize the Cold Path pipeline.
+        Initialize the Cold Path pipeline with MLX.
 
         Args:
-            whisper_model: Whisper model to use (large-v3-turbo recommended)
+            whisper_model: MLX Whisper model to use (mlx-community/whisper-large-v3-turbo recommended)
             diarization_model: Pyannote diarization model to use
-            device: Device to use (auto-detected if None)
-            compute_type: Compute type for faster-whisper
+            device: Device to use for diarization (auto-detected if None)
             use_diarization: Whether to perform speaker diarization
             hf_token: HuggingFace token for Pyannote models (required for diarization)
             verbose: Whether to print progress
         """
         self.verbose = verbose
         self.use_diarization = use_diarization
+        self.whisper_model_name = whisper_model
 
-        # Auto-detect device
+        # Auto-detect device for diarization (MLX uses Metal automatically)
         if device is None:
             if torch.cuda.is_available():
                 self.device = "cuda"
@@ -105,18 +109,16 @@ class ColdPathPipeline:
             self.device = device
 
         if self.verbose:
-            print("🔧 Initializing Cold Path Pipeline")
-            print(f"   Device: {self.device}")
+            print("🔧 Initializing Cold Path Pipeline (MLX)")
+            print(f"   Device (diarization): {self.device}")
+            print("   Device (MLX-Whisper): Metal")
             print(f"   Whisper model: {whisper_model}")
             print(f"   Diarization: {'enabled' if use_diarization else 'disabled'}")
 
-        # Load Whisper model
-        with Timer("Loading Whisper model", verbose=self.verbose):
-            self.whisper_model = WhisperModel(
-                whisper_model,
-                device=self.device if self.device != "mps" else "cpu",  # faster-whisper doesn't support MPS
-                compute_type=compute_type
-            )
+        # MLX-Whisper loads models on first use - no pre-loading needed
+        with Timer("Loading MLX-Whisper model", verbose=self.verbose):
+            # First transcription will trigger model download/cache
+            pass
 
         # Load diarization pipeline if enabled
         self.diarization_pipeline = None
@@ -140,7 +142,7 @@ class ColdPathPipeline:
 
     def transcribe(self, audio_path: str | Path, language: str = "en") -> Dict[str, Any]:
         """
-        Transcribe audio with VAD filtering and word-level timestamps.
+        Transcribe audio using MLX-Whisper.
 
         Args:
             audio_path: Path to audio file
@@ -149,40 +151,52 @@ class ColdPathPipeline:
         Returns:
             Dictionary with transcription results
         """
-        with Timer("Transcribing audio", verbose=self.verbose):
-            segments, info = self.whisper_model.transcribe(
-                str(audio_path),
-                language=language,
+        with Timer("Transcribing audio with MLX", verbose=self.verbose):
+            # Suppress MLX-Whisper's progress bars
+            with contextlib.redirect_stdout(open(os.devnull, 'w')), \
+                 contextlib.redirect_stderr(open(os.devnull, 'w')):
 
-                # Hallucination prevention
-                condition_on_previous_text=False,
+                result = mlx_whisper.transcribe(
+                    str(audio_path),
+                    path_or_hf_repo=self.whisper_model_name,
+                    language=language,
 
-                # VAD filtering (uses Silero VAD internally)
-                vad_filter=True,
-                vad_parameters=dict(
-                    min_silence_duration_ms=500,  # Minimum silence duration to consider
-                    threshold=0.5,                # VAD threshold
-                    min_speech_duration_ms=250,   # Minimum speech duration
-                ),
+                    # CRITICAL: NO initial_prompt - causes severe hallucinations in MLX
+                    # initial_prompt=None,
 
-                # Word-level timestamps
-                word_timestamps=True,
+                    # Hallucination prevention
+                    condition_on_previous_text=False,
 
-                # Prevent repetition
-                temperature=[0.0, 0.2, 0.4, 0.6, 0.8, 1.0],
-                compression_ratio_threshold=2.4,
-                log_prob_threshold=-1.0,
-                no_speech_threshold=0.6,
-            )
+                    # Anti-hallucination parameters
+                    temperature=0.0,  # Greedy decoding only
+                    compression_ratio_threshold=2.4,
+                    logprob_threshold=-1.0,
+                    no_speech_threshold=0.6,
 
-            # Convert to list
-            segments = list(segments)
+                    # Output format
+                    word_timestamps=True,
+                    verbose=False
+                )
+
+        # Convert to faster-whisper compatible format
+        segments = result.get('segments', [])
+
+        # Get actual audio duration (don't trust MLX segments - they can hallucinate beyond audio end)
+        try:
+            audio_info = sf.info(str(audio_path))
+            duration = audio_info.duration
+        except Exception:
+            # Fallback to segment-based estimation
+            duration = segments[-1]['end'] if segments else 0.0
+
+        # Filter out segments that are beyond the actual audio duration
+        # (MLX can hallucinate "Thank you" etc. on silence after audio ends)
+        segments = [seg for seg in segments if seg['start'] < duration]
 
         return {
             "segments": segments,
-            "info": info,
-            "language": info.language,
-            "duration": info.duration
+            "language": language,
+            "duration": duration
         }
 
     def diarize(self, audio_path: str | Path) -> Optional[Any]:
@@ -245,14 +259,8 @@ class ColdPathPipeline:
                 import librosa
                 audio, _ = librosa.load(str(audio_path), sr=16000, mono=True)
 
-            # Convert faster-whisper segments to WhisperX format
-            segments_dict = []
-            for seg in transcription_result['segments']:
-                segments_dict.append({
-                    "start": seg.start,
-                    "end": seg.end,
-                    "text": seg.text
-                })
+            # MLX-Whisper segments are already in dict format
+            segments_dict = transcription_result['segments']
 
             result = {"segments": segments_dict, "language": transcription_result['language']}
 
@@ -289,14 +297,12 @@ class ColdPathPipeline:
                         segment_mid = (segment_start + segment_end) / 2
 
                         # Find speaker at segment midpoint by cropping annotation
-                        # Crop returns speakers active in this time window
                         from pyannote.core import Segment as PyannoteSegment
                         window = PyannoteSegment(segment_start, segment_end)
                         speakers_in_window = annotation.crop(window)
 
                         # Get the speaker who speaks most in this window
                         if speakers_in_window:
-                            # argmax returns the most active speaker
                             speaker = speakers_in_window.argmax()
                             if speaker:
                                 segment["speaker"] = speaker
@@ -347,7 +353,7 @@ class ColdPathPipeline:
                 transcription = future_transcription.result()
                 diarization = future_diarization.result()
         else:
-            # Sequential processing (original behavior)
+            # Sequential processing
             transcription = self.transcribe(audio_path, language)
             diarization = None
             if self.use_diarization:
@@ -361,20 +367,74 @@ class ColdPathPipeline:
             result = {
                 "segments": [
                     {
-                        "start": seg.start,
-                        "end": seg.end,
-                        "text": seg.text,
+                        "start": seg['start'],
+                        "end": seg['end'],
+                        "text": seg['text'],
                         "speaker": None
                     }
                     for seg in transcription['segments']
                 ]
             }
 
+        # Step 4: Merge short segments (MLX doesn't have VAD filtering, creates micro-segments)
+        if result.get('segments'):
+            result['segments'] = self.merge_short_segments(
+                result['segments'],
+                min_gap=0.5,      # Merge if gap < 500ms
+                min_duration=1.0  # Merge if segment < 1 second
+            )
+
         # Add metadata
         result['duration'] = transcription['duration']
         result['language'] = transcription['language']
 
         return result
+
+    def merge_short_segments(
+        self,
+        segments: list[Dict[str, Any]],
+        min_gap: float = 0.5,
+        min_duration: float = 1.0
+    ) -> list[Dict[str, Any]]:
+        """
+        Merge segments that are too short or too close together.
+
+        MLX-Whisper doesn't support VAD filtering, so it creates micro-segments
+        at every tiny pause. This function merges them back together.
+
+        Args:
+            segments: List of segments with start, end, text, speaker
+            min_gap: Minimum gap (seconds) between segments before merging
+            min_duration: Merge segments shorter than this (seconds)
+
+        Returns:
+            List of merged segments
+        """
+        if not segments:
+            return segments
+
+        merged = []
+        current = segments[0].copy()
+
+        for seg in segments[1:]:
+            gap = seg['start'] - current['end']
+            same_speaker = seg.get('speaker') == current.get('speaker')
+            is_short = (current['end'] - current['start']) < min_duration
+
+            # Merge if: same speaker AND (gap is small OR current segment is very short)
+            if same_speaker and (gap < min_gap or is_short):
+                # Extend current segment
+                current['end'] = seg['end']
+                current['text'] = current['text'].strip() + ' ' + seg['text'].strip()
+            else:
+                # Finalize current segment
+                merged.append(current)
+                current = seg.copy()
+
+        # Don't forget the last segment
+        merged.append(current)
+
+        return merged
 
     def format_transcript(self, result: Dict[str, Any]) -> str:
         """
@@ -409,7 +469,7 @@ def main():
     import sys
 
     if len(sys.argv) < 2:
-        print("Usage: python cold_path_pipeline.py <audio_file> [--no-diarization]")
+        print("Usage: python cold_path_pipeline_v2.py <audio_file> [--no-diarization]")
         sys.exit(1)
 
     audio_path = sys.argv[1]
@@ -420,7 +480,7 @@ def main():
     hf_token = os.getenv("HF_TOKEN")
 
     # Create pipeline
-    pipeline = ColdPathPipeline(
+    pipeline = ColdPathPipeline_MLX(
         use_diarization=use_diarization,
         hf_token=hf_token,
         verbose=True
