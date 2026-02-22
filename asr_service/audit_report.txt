@@ -1,0 +1,348 @@
+=== RUFF CHECK ===
+F401 [*] `asr_service.schemas.transcription.ErrorResponse` imported but unused
+ --> src/asr_service/api/v1/endpoints/transcribe.py:6:92
+  |
+4 | from fastapi import APIRouter, UploadFile, File, Depends, HTTPException, WebSocket, WebSocketDisconnect
+5 | from asr_service.api.deps import get_asr_engine, get_audio_processor
+6 | from asr_service.schemas.transcription import TranscriptionResponse, PartialTranscription, ErrorResponse
+  |                                                                                            ^^^^^^^^^^^^^
+7 | from asr_service.services.model_loader import ASREngine
+8 | from asr_service.services.audio_processor import AudioProcessor
+  |
+help: Remove unused import: `asr_service.schemas.transcription.ErrorResponse`
+
+E722 Do not use bare `except`
+   --> src/asr_service/api/v1/endpoints/transcribe.py:172:9
+    |
+170 |             error_response = {"error": str(e)}
+171 |             await websocket.send_text(json.dumps(error_response))
+172 |         except:
+    |         ^^^^^^
+173 |             pass
+174 |     finally:
+    |
+
+F401 [*] `typing.Optional` imported but unused
+ --> src/asr_service/core/logging.py:3:20
+  |
+1 | import logging
+2 | import sys
+3 | from typing import Optional
+  |                    ^^^^^^^^
+  |
+help: Remove unused import: `typing.Optional`
+
+F401 [*] `torch` imported but unused
+ --> src/asr_service/services/model_loader.py:1:8
+  |
+1 | import torch
+  |        ^^^^^
+2 | from transformers import AutoModelForSpeechSeq2Seq, AutoProcessor, pipeline
+3 | from typing import Optional
+  |
+help: Remove unused import: `torch`
+
+F401 [*] `pytest` imported but unused
+ --> tests/integration/test_e2e_workflow.py:1:8
+  |
+1 | import pytest
+  |        ^^^^^^
+  |
+help: Remove unused import: `pytest`
+
+F401 [*] `pytest` imported but unused
+ --> tests/integration/test_health_endpoint.py:1:8
+  |
+1 | import pytest
+  |        ^^^^^^
+  |
+help: Remove unused import: `pytest`
+
+F401 [*] `pytest` imported but unused
+ --> tests/integration/test_live_transcribe_ws.py:1:8
+  |
+1 | import pytest
+  |        ^^^^^^
+2 | import json
+  |
+help: Remove unused import: `pytest`
+
+F401 [*] `pytest` imported but unused
+ --> tests/integration/test_transcribe_final.py:1:8
+  |
+1 | import pytest
+  |        ^^^^^^
+  |
+help: Remove unused import: `pytest`
+
+F401 [*] `pytest` imported but unused
+ --> tests/unit/test_config.py:1:8
+  |
+1 | import pytest
+  |        ^^^^^^
+2 | import os
+3 | from asr_service.core.config import Settings
+  |
+help: Remove unused import: `pytest`
+
+F401 [*] `os` imported but unused
+ --> tests/unit/test_config.py:2:8
+  |
+1 | import pytest
+2 | import os
+  |        ^^
+3 | from asr_service.core.config import Settings
+  |
+help: Remove unused import: `os`
+
+F401 [*] `pytest` imported but unused
+ --> tests/unit/test_file_ops.py:1:8
+  |
+1 | import pytest
+  |        ^^^^^^
+2 | from pathlib import Path
+3 | from asr_service.utils.file_ops import create_temp_file, validate_mime_type
+  |
+help: Remove unused import: `pytest`
+
+F401 [*] `pytest` imported but unused
+ --> tests/unit/test_model_loader.py:1:8
+  |
+1 | import pytest
+  |        ^^^^^^
+2 | import torch
+3 | from asr_service.services.model_loader import ASREngine
+  |
+help: Remove unused import: `pytest`
+
+Found 12 errors.
+[*] 11 fixable with the `--fix` option.
+
+=== BANDIT SECURITY ===
+[main]	INFO	profile include tests: None
+[main]	INFO	profile exclude tests: None
+[main]	INFO	cli include tests: None
+[main]	INFO	cli exclude tests: None
+[main]	INFO	running on Python 3.13.5
+Run started:2026-02-22 09:04:09.314089+00:00
+
+Test results:
+>> Issue: [B110:try_except_pass] Try, Except, Pass detected.
+   Severity: Low   Confidence: High
+   CWE: CWE-703 (https://cwe.mitre.org/data/definitions/703.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.3/plugins/b110_try_except_pass.html
+   Location: src/asr_service/api/v1/endpoints/transcribe.py:172:8
+171	            await websocket.send_text(json.dumps(error_response))
+172	        except:
+173	            pass
+174	    finally:
+
+--------------------------------------------------
+>> Issue: [B104:hardcoded_bind_all_interfaces] Possible binding to all interfaces.
+   Severity: Medium   Confidence: Medium
+   CWE: CWE-605 (https://cwe.mitre.org/data/definitions/605.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.3/plugins/b104_hardcoded_bind_all_interfaces.html
+   Location: src/asr_service/core/config.py:33:16
+32	    # Server settings
+33	    HOST: str = "0.0.0.0"
+34	    PORT: int = 8000
+
+--------------------------------------------------
+>> Issue: [B615:huggingface_unsafe_download] Unsafe Hugging Face Hub download without revision pinning in from_pretrained()
+   Severity: Medium   Confidence: High
+   CWE: CWE-494 (https://cwe.mitre.org/data/definitions/494.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.3/plugins/b615_huggingface_unsafe_download.html
+   Location: src/asr_service/services/model_loader.py:55:25
+54	
+55	            self.model = AutoModelForSpeechSeq2Seq.from_pretrained(
+56	                self.model_id,
+57	                **load_kwargs
+58	            )
+59	            self.model.to(self.device)
+
+--------------------------------------------------
+>> Issue: [B615:huggingface_unsafe_download] Unsafe Hugging Face Hub download without revision pinning in from_pretrained()
+   Severity: Medium   Confidence: High
+   CWE: CWE-494 (https://cwe.mitre.org/data/definitions/494.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.3/plugins/b615_huggingface_unsafe_download.html
+   Location: src/asr_service/services/model_loader.py:61:29
+60	
+61	            self.processor = AutoProcessor.from_pretrained(self.model_id)
+62	
+
+--------------------------------------------------
+
+Code scanned:
+	Total lines of code: 522
+	Total lines skipped (#nosec): 0
+	Total potential issues skipped due to specifically being disabled (e.g., #nosec BXXX): 0
+
+Run metrics:
+	Total issues (by severity):
+		Undefined: 0
+		Low: 1
+		Medium: 3
+		High: 0
+	Total issues (by confidence):
+		Undefined: 0
+		Low: 0
+		Medium: 1
+		High: 3
+Files skipped (0):
+
+=== MYPY TYPE CHECK ===
+src/asr_service/services/audio_processor.py:60: error: Incompatible return value type (got "tuple[ndarray[tuple[Any, ...], dtype[Any]], int | float]", expected "tuple[ndarray[tuple[Any, ...], dtype[Any]], int]")  [return-value]
+src/asr_service/core/config.py:9: error: Extra keys ("env_file", "case_sensitive") for TypedDict "ConfigDict"  [typeddict-unknown-key]
+src/asr_service/core/config.py:9: error: Incompatible types in assignment (expression has type "ConfigDict", base class "BaseSettings" defined the type as "SettingsConfigDict")  [assignment]
+src/asr_service/api/v1/endpoints/transcribe.py:29: error: Argument 1 to "validate_mime_type" has incompatible type "str | None"; expected "str"  [arg-type]
+src/asr_service/api/v1/endpoints/transcribe.py:37: error: Argument 1 to "Path" has incompatible type "str | None"; expected "str | PathLike[str]"  [arg-type]
+src/asr_service/api/v1/endpoints/transcribe.py:116: error: Skipping analyzing "soundfile": module is installed, but missing library stubs or py.typed marker  [import-untyped]
+src/asr_service/api/v1/endpoints/transcribe.py:116: note: See https://mypy.readthedocs.io/en/stable/running_mypy.html#missing-imports
+Found 6 errors in 3 files (checked 19 source files)
+
+=== RADON COMPLEXITY ===
+src/asr_service/__init__.py
+    F 1:0 hello - A
+src/asr_service/main.py
+    F 10:0 lifespan - A
+    F 47:0 root - A
+src/asr_service/core/logging.py
+    F 6:0 setup_logging - A
+src/asr_service/core/config.py
+    C 6:0 Settings - A
+    M 39:4 Settings.get_device - A
+    M 51:4 Settings.get_torch_dtype - A
+src/asr_service/utils/file_ops.py
+    F 9:0 create_temp_file - A
+    F 32:0 validate_mime_type - A
+src/asr_service/schemas/transcription.py
+    C 5:0 TranscriptionResponse - A
+    C 11:0 PartialTranscription - A
+    C 17:0 HealthResponse - A
+    C 25:0 ErrorResponse - A
+src/asr_service/api/deps.py
+    F 5:0 get_asr_engine - A
+    F 15:0 get_audio_processor - A
+src/asr_service/api/v1/endpoints/health.py
+    F 11:0 health_check - A
+src/asr_service/api/v1/endpoints/transcribe.py
+    F 78:0 live_transcribe - C
+    F 16:0 transcribe_final - B
+src/asr_service/services/audio_processor.py
+    C 8:0 AudioProcessor - A
+    M 13:4 AudioProcessor.validate_audio_file - A
+    M 34:4 AudioProcessor.load_and_convert_audio - A
+    M 66:4 AudioProcessor.convert_bytes_to_audio - A
+    M 83:4 AudioProcessor.chunk_audio - A
+src/asr_service/services/model_loader.py
+    M 35:4 ASREngine.load_model - A
+    C 8:0 ASREngine - A
+    M 13:4 ASREngine.__new__ - A
+    M 19:4 ASREngine.__init__ - A
+    M 93:4 ASREngine.transcribe_final - A
+    M 120:4 ASREngine.transcribe_live - A
+    M 140:4 ASREngine.get_final_model - A
+    M 144:4 ASREngine.get_live_model - A
+
+31 blocks (classes, functions, methods) analyzed.
+Average complexity: A (2.4193548387096775)
+
+=== VULTURE DEAD CODE ===
+src/asr_service/__init__.py:1: unused function 'hello' (60% confidence)
+src/asr_service/api/v1/endpoints/health.py:10: unused function 'health_check' (60% confidence)
+src/asr_service/api/v1/endpoints/transcribe.py:6: unused import 'ErrorResponse' (90% confidence)
+src/asr_service/api/v1/endpoints/transcribe.py:77: unused function 'live_transcribe' (60% confidence)
+src/asr_service/core/config.py:9: unused variable 'model_config' (60% confidence)
+src/asr_service/core/config.py:19: unused variable 'WHISPER_MODEL' (60% confidence)
+src/asr_service/core/config.py:20: unused variable 'DIARIZATION_MODEL' (60% confidence)
+src/asr_service/core/config.py:33: unused variable 'HOST' (60% confidence)
+src/asr_service/core/config.py:34: unused variable 'PORT' (60% confidence)
+src/asr_service/core/config.py:37: unused variable 'HF_TOKEN' (60% confidence)
+src/asr_service/main.py:46: unused function 'root' (60% confidence)
+src/asr_service/schemas/transcription.py:7: unused variable 'text' (60% confidence)
+src/asr_service/schemas/transcription.py:13: unused variable 'partial' (60% confidence)
+src/asr_service/schemas/transcription.py:14: unused variable 'is_final' (60% confidence)
+src/asr_service/schemas/transcription.py:19: unused variable 'status' (60% confidence)
+src/asr_service/schemas/transcription.py:20: unused variable 'model_loaded' (60% confidence)
+src/asr_service/schemas/transcription.py:25: unused class 'ErrorResponse' (60% confidence)
+src/asr_service/schemas/transcription.py:28: unused variable 'detail' (60% confidence)
+src/asr_service/services/audio_processor.py:34: unused method 'load_and_convert_audio' (60% confidence)
+src/asr_service/services/audio_processor.py:83: unused method 'chunk_audio' (60% confidence)
+src/asr_service/services/model_loader.py:140: unused method 'get_final_model' (60% confidence)
+src/asr_service/services/model_loader.py:144: unused method 'get_live_model' (60% confidence)
+
+=== PYLINT ===
+************* Module asr_service
+src/asr_service/__init__.py:1:0: C0114: Missing module docstring (missing-module-docstring)
+src/asr_service/__init__.py:1:0: C0116: Missing function or method docstring (missing-function-docstring)
+************* Module asr_service.main
+src/asr_service/main.py:1:0: C0114: Missing module docstring (missing-module-docstring)
+src/asr_service/main.py:10:19: W0621: Redefining name 'app' from outer scope (line 35) (redefined-outer-name)
+src/asr_service/main.py:18:4: W1203: Use lazy % formatting in logging functions (logging-fstring-interpolation)
+src/asr_service/main.py:19:4: W1203: Use lazy % formatting in logging functions (logging-fstring-interpolation)
+src/asr_service/main.py:26:8: W1203: Use lazy % formatting in logging functions (logging-fstring-interpolation)
+src/asr_service/main.py:10:19: W0613: Unused argument 'app' (unused-argument)
+************* Module asr_service.core.logging
+src/asr_service/core/logging.py:1:0: C0114: Missing module docstring (missing-module-docstring)
+src/asr_service/core/logging.py:16:4: W0621: Redefining name 'logger' from outer scope (line 38) (redefined-outer-name)
+src/asr_service/core/logging.py:3:0: W0611: Unused Optional imported from typing (unused-import)
+************* Module asr_service.core.config
+src/asr_service/core/config.py:19:0: C0301: Line too long (121/100) (line-too-long)
+src/asr_service/core/config.py:1:0: C0114: Missing module docstring (missing-module-docstring)
+src/asr_service/core/config.py:44:8: R1705: Unnecessary "elif" after "return", remove the leading "el" from "elif" (no-else-return)
+************* Module asr_service.utils.file_ops
+src/asr_service/utils/file_ops.py:1:0: C0114: Missing module docstring (missing-module-docstring)
+src/asr_service/utils/file_ops.py:29:16: W1203: Use lazy % formatting in logging functions (logging-fstring-interpolation)
+************* Module asr_service.schemas.transcription
+src/asr_service/schemas/transcription.py:1:0: C0114: Missing module docstring (missing-module-docstring)
+src/asr_service/schemas/transcription.py:2:0: C0411: standard import "typing.Optional" should be placed before third party import "pydantic.BaseModel" (wrong-import-order)
+************* Module asr_service.api.deps
+src/asr_service/api/deps.py:1:0: C0114: Missing module docstring (missing-module-docstring)
+************* Module asr_service.api.v1.router
+src/asr_service/api/v1/router.py:1:0: C0114: Missing module docstring (missing-module-docstring)
+************* Module asr_service.api.v1.endpoints.health
+src/asr_service/api/v1/endpoints/health.py:1:0: C0114: Missing module docstring (missing-module-docstring)
+************* Module asr_service.api.v1.endpoints.transcribe
+src/asr_service/api/v1/endpoints/transcribe.py:4:0: C0301: Line too long (103/100) (line-too-long)
+src/asr_service/api/v1/endpoints/transcribe.py:6:0: C0301: Line too long (104/100) (line-too-long)
+src/asr_service/api/v1/endpoints/transcribe.py:144:0: C0301: Line too long (103/100) (line-too-long)
+src/asr_service/api/v1/endpoints/transcribe.py:1:0: C0114: Missing module docstring (missing-module-docstring)
+src/asr_service/api/v1/endpoints/transcribe.py:56:12: W1203: Use lazy % formatting in logging functions (logging-fstring-interpolation)
+src/asr_service/api/v1/endpoints/transcribe.py:60:12: W1203: Use lazy % formatting in logging functions (logging-fstring-interpolation)
+src/asr_service/api/v1/endpoints/transcribe.py:70:8: W1203: Use lazy % formatting in logging functions (logging-fstring-interpolation)
+src/asr_service/api/v1/endpoints/transcribe.py:71:8: W0707: Consider explicitly re-raising using 'raise HTTPException(status_code=500, detail=f'Transcription failed: {str(e)}') from e' (raise-missing-from)
+src/asr_service/api/v1/endpoints/transcribe.py:167:11: W0718: Catching too general exception Exception (broad-exception-caught)
+src/asr_service/api/v1/endpoints/transcribe.py:130:27: W0718: Catching too general exception Exception (broad-exception-caught)
+src/asr_service/api/v1/endpoints/transcribe.py:116:28: C0415: Import outside toplevel (soundfile) (import-outside-toplevel)
+src/asr_service/api/v1/endpoints/transcribe.py:131:24: W1203: Use lazy % formatting in logging functions (logging-fstring-interpolation)
+src/asr_service/api/v1/endpoints/transcribe.py:158:31: W0718: Catching too general exception Exception (broad-exception-caught)
+src/asr_service/api/v1/endpoints/transcribe.py:146:32: C0415: Import outside toplevel (soundfile) (import-outside-toplevel)
+src/asr_service/api/v1/endpoints/transcribe.py:159:28: W1203: Use lazy % formatting in logging functions (logging-fstring-interpolation)
+src/asr_service/api/v1/endpoints/transcribe.py:168:8: W1203: Use lazy % formatting in logging functions (logging-fstring-interpolation)
+src/asr_service/api/v1/endpoints/transcribe.py:172:8: W0702: No exception type(s) specified (bare-except)
+src/asr_service/api/v1/endpoints/transcribe.py:95:4: R1702: Too many nested blocks (6/5) (too-many-nested-blocks)
+src/asr_service/api/v1/endpoints/transcribe.py:78:0: R0915: Too many statements (55/50) (too-many-statements)
+src/asr_service/api/v1/endpoints/transcribe.py:6:0: W0611: Unused ErrorResponse imported from asr_service.schemas.transcription (unused-import)
+************* Module asr_service.services.audio_processor
+src/asr_service/services/audio_processor.py:1:0: C0114: Missing module docstring (missing-module-docstring)
+src/asr_service/services/audio_processor.py:24:12: W1203: Use lazy % formatting in logging functions (logging-fstring-interpolation)
+src/asr_service/services/audio_processor.py:29:12: W1203: Use lazy % formatting in logging functions (logging-fstring-interpolation)
+src/asr_service/services/audio_processor.py:59:12: W1203: Use lazy % formatting in logging functions (logging-fstring-interpolation)
+src/asr_service/services/audio_processor.py:63:12: W1203: Use lazy % formatting in logging functions (logging-fstring-interpolation)
+src/asr_service/services/audio_processor.py:64:12: W0707: Consider explicitly re-raising using 'raise ValueError(f'Invalid audio file: {e}') from e' (raise-missing-from)
+src/asr_service/services/audio_processor.py:80:12: W1203: Use lazy % formatting in logging functions (logging-fstring-interpolation)
+src/asr_service/services/audio_processor.py:81:12: W0707: Consider explicitly re-raising using 'raise ValueError(f'Invalid audio bytes: {e}') from e' (raise-missing-from)
+src/asr_service/services/audio_processor.py:3:0: C0411: standard import "pathlib.Path" should be placed before third party imports "librosa", "numpy" (wrong-import-order)
+src/asr_service/services/audio_processor.py:4:0: C0411: standard import "typing.Tuple" should be placed before third party imports "librosa", "numpy" (wrong-import-order)
+************* Module asr_service.services.model_loader
+src/asr_service/services/model_loader.py:1:0: C0114: Missing module docstring (missing-module-docstring)
+src/asr_service/services/model_loader.py:8:0: R0902: Too many instance attributes (9/7) (too-many-instance-attributes)
+src/asr_service/services/model_loader.py:42:12: W1203: Use lazy % formatting in logging functions (logging-fstring-interpolation)
+src/asr_service/services/model_loader.py:90:12: W1203: Use lazy % formatting in logging functions (logging-fstring-interpolation)
+src/asr_service/services/model_loader.py:20:11: E0203: Access to member '_initialized' before its definition line 33 (access-member-before-definition)
+src/asr_service/services/model_loader.py:3:0: C0411: standard import "typing.Optional" should be placed before third party imports "torch", "transformers.AutoModelForSpeechSeq2Seq" (wrong-import-order)
+src/asr_service/services/model_loader.py:1:0: W0611: Unused import torch (unused-import)
+
+------------------------------------------------------------------
+Your code has been rated at 8.00/10 (previous run: 9.70/10, -1.70)
+
