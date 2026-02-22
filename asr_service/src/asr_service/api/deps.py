@@ -1,22 +1,29 @@
-from asr_service.services.model_loader import ASREngine
-from asr_service.services.audio_processor import AudioProcessor
+"""
+FastAPI dependency injection.
 
+SHOULD:
+- Provide dependency injection for shared resources
+- Return singleton ASREngine instance
+- Handle lazy initialization of models
 
-def get_asr_engine() -> ASREngine:
-    """
-    Dependency injection for ASR engine.
+CONTRACTS:
+- Functions:
+  - get_asr_engine() -> ASREngine  # Returns singleton, loads model if needed
+  - get_audio_processor() -> AudioProcessor | None  # Optional, may not be needed
 
-    Returns:
-        Singleton ASREngine instance
-    """
-    return ASREngine()
+BEHAVIOR:
+- get_asr_engine() should:
+  - Return the singleton ASREngine instance
+  - Call engine.load_model() if not already loaded
+  - Be used as Depends() in FastAPI endpoints
+  - Handle errors gracefully (log and raise HTTPException)
 
-
-def get_audio_processor() -> AudioProcessor:
-    """
-    Dependency injection for audio processor.
-
-    Returns:
-        AudioProcessor instance
-    """
-    return AudioProcessor()
+EXAMPLE USAGE:
+@app.post("/transcribe")
+async def transcribe(
+    file: UploadFile,
+    engine: ASREngine = Depends(get_asr_engine)
+):
+    result = engine.transcribe_file(file_path)
+    return result
+"""

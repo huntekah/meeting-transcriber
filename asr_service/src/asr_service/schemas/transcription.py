@@ -1,28 +1,37 @@
-from pydantic import BaseModel
-from typing import Optional
+"""
+Pydantic schemas for API request/response models.
 
+SHOULD:
+- Define response models for transcription endpoints
+- Support both simple transcription and diarized transcription with speakers
+- Include models for:
+  - TranscriptionResponse (final/cold path results)
+  - TranscriptionSegment (with start, end, text, optional speaker)
+  - PartialTranscription (live streaming updates)
+  - HealthResponse (service health check)
+  - ErrorResponse (error handling)
 
-class TranscriptionResponse(BaseModel):
-    """Response schema for final transcription."""
-    text: str
-    processing_time: float
+CONTRACTS:
+- All responses must be JSON-serializable Pydantic models
+- Support speaker diarization fields (speaker: str | None)
+- Include timestamps (start, end as floats in seconds)
+- Include metadata (duration, language, processing_time)
+- Compatible with FastAPI automatic validation
 
+EXAMPLE SEGMENT:
+{
+    "start": 0.8,
+    "end": 5.1,
+    "text": "Hello world",
+    "speaker": "SPEAKER_00"  # Optional, only if diarization enabled
+}
 
-class PartialTranscription(BaseModel):
-    """Schema for partial/live transcription updates."""
-    partial: str
-    is_final: bool
-
-
-class HealthResponse(BaseModel):
-    """Response schema for health check endpoint."""
-    status: str
-    model_loaded: bool
-    device: str
-    model_id: Optional[str] = None
-
-
-class ErrorResponse(BaseModel):
-    """Schema for error responses."""
-    error: str
-    detail: Optional[str] = None
+EXAMPLE RESPONSE:
+{
+    "segments": [...],
+    "text": "Full transcript",
+    "duration": 60.0,
+    "language": "en",
+    "processing_time": 12.5
+}
+"""

@@ -1,8 +1,23 @@
-from fastapi import APIRouter
-from asr_service.api.v1.endpoints import health, transcribe
+"""
+API v1 router configuration.
 
-api_router = APIRouter()
+SHOULD:
+- Create APIRouter for /api/v1 prefix
+- Include all v1 endpoint routers (health, transcribe)
+- Define route tags for OpenAPI documentation
 
-# Include all endpoint routers
+CONTRACTS:
+- Export: api_router (APIRouter instance)
+- Includes:
+  - health.router (tag: "health")
+  - transcribe.router (tag: "transcription")
+
+STRUCTURE:
+api_router = APIRouter(prefix="/api/v1")
 api_router.include_router(health.router, tags=["health"])
 api_router.include_router(transcribe.router, tags=["transcription"])
+
+NOTE:
+- This file is likely fine as-is, just need to ensure imports are correct
+- Keep it simple - just route aggregation
+"""
