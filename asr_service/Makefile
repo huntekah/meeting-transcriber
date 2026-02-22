@@ -1,10 +1,11 @@
-.PHONY: help install run dev test clean lint format
+.PHONY: help install run dev run-cli test clean lint format
 
 help:
 	@echo "Available commands:"
 	@echo "  make install    - Install dependencies using uv"
 	@echo "  make run        - Start the ASR service"
 	@echo "  make dev        - Start with auto-reload (development mode)"
+	@echo "  make run-cli    - Start the CLI frontend"
 	@echo "  make test       - Run tests"
 	@echo "  make lint       - Run code linters"
 	@echo "  make format     - Format code"
@@ -14,10 +15,13 @@ install:
 	uv sync
 
 run:
-	cd src && uvicorn asr_service.main:app --host 0.0.0.0 --port 8000
+	cd src && uv run uvicorn asr_service.main:app --host 0.0.0.0 --port 8000
 
 dev:
-	cd src && uvicorn asr_service.main:app --host 0.0.0.0 --port 8000 --reload
+	cd src && uv run uvicorn asr_service.main:app --host 0.0.0.0 --port 8000 --reload
+
+run-cli:
+	cd src && uv run --group cli python -m cli_frontend
 
 test:
 	uv run pytest
