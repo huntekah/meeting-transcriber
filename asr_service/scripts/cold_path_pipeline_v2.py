@@ -34,11 +34,11 @@ warnings.filterwarnings("ignore", message=".*torchaudio.load_with_torchcodec.*")
 warnings.filterwarnings("ignore", category=UserWarning, module="pyannote.audio.core.io")
 warnings.filterwarnings("ignore", category=UserWarning, module="torchaudio._backend.utils")
 
-import torch
-import whisperx
-import mlx_whisper
-import soundfile as sf
-from pyannote.audio import Pipeline as DiarizationPipeline
+import torch  # noqa: E402
+import whisperx  # noqa: E402
+import mlx_whisper  # noqa: E402
+import soundfile as sf  # noqa: E402
+from pyannote.audio import Pipeline as DiarizationPipeline  # noqa: E402
 
 
 class Timer:
@@ -294,9 +294,8 @@ class ColdPathPipeline_MLX:
                     for segment in result.get("segments", []):
                         segment_start = segment["start"]
                         segment_end = segment["end"]
-                        segment_mid = (segment_start + segment_end) / 2
 
-                        # Find speaker at segment midpoint by cropping annotation
+                        # Find speaker by cropping annotation to segment window
                         from pyannote.core import Segment as PyannoteSegment
                         window = PyannoteSegment(segment_start, segment_end)
                         speakers_in_window = annotation.crop(window)

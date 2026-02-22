@@ -26,7 +26,7 @@ load_dotenv(dotenv_path=env_path)
 sys.path.insert(0, str(Path(__file__).parent.parent / 'src'))
 
 # Import unified config
-from config import config
+from config import config  # noqa: E402
 
 FULL_VIDEO_PATH = Path(__file__).parent.parent / "data" / "full_meeting_audio.mp3"
 TEMP_AUDIO_PATH = Path(__file__).parent.parent / "data" / "temp_segment.mp3"
@@ -199,7 +199,7 @@ def test_microphone():
     loader_thread.start()
 
     # Record audio
-    duration = record_from_microphone(output_path)
+    _ = record_from_microphone(output_path)
 
     # Wait for model to load
     if not model_loaded.is_set():

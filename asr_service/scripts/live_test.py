@@ -26,11 +26,11 @@ import warnings
 warnings.filterwarnings("ignore", category=FutureWarning)
 warnings.filterwarnings("ignore", category=UserWarning)
 
-import numpy as np
-import sounddevice as sd
-import torch
-from faster_whisper import WhisperModel
-from dotenv import load_dotenv
+import numpy as np  # noqa: E402
+import sounddevice as sd  # noqa: E402
+import torch  # noqa: E402
+from faster_whisper import WhisperModel  # noqa: E402
+from dotenv import load_dotenv  # noqa: E402
 
 # Load .env file from parent directory
 env_path = Path(__file__).parent.parent / '.env'
@@ -40,7 +40,7 @@ load_dotenv(dotenv_path=env_path)
 sys.path.insert(0, str(Path(__file__).parent.parent / 'src'))
 
 # Import unified config
-from config import config
+from config import config  # noqa: E402
 
 
 # ==============================================================================
