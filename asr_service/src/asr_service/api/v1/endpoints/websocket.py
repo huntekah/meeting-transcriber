@@ -45,11 +45,13 @@ async def websocket_endpoint(
         # Get session
         session = await session_manager.get_session_or_none(session_id)
         if not session:
-            await websocket.send_json({
-                "type": "error",
-                "message": f"Session {session_id} not found",
-                "code": "SESSION_NOT_FOUND",
-            })
+            await websocket.send_json(
+                {
+                    "type": "error",
+                    "message": f"Session {session_id} not found",
+                    "code": "SESSION_NOT_FOUND",
+                }
+            )
             await websocket.close(code=1008)  # Policy violation
             return
 

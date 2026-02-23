@@ -27,7 +27,6 @@ from ..schemas.websocket import (
     WSStateChangeMessage,
     WSUtteranceMessage,
     WSFinalTranscriptMessage,
-    WSErrorMessage,
 )
 from .source_pipeline import SourcePipeline
 from .transcript_merger import ChronologicalMerger
@@ -139,7 +138,9 @@ class ActiveSession:
             logger.info(f"Session {self.session_id} initialized successfully")
 
         except Exception as e:
-            logger.error(f"Session {self.session_id} initialization failed: {e}", exc_info=True)
+            logger.error(
+                f"Session {self.session_id} initialization failed: {e}", exc_info=True
+            )
             self._set_state(SessionState.FAILED)
             raise
 
@@ -234,7 +235,9 @@ class ActiveSession:
 
         # Convert to ColdTranscriptResult
         self.final_transcript = ColdTranscriptResult(
-            segments=result['segments'], duration=result['duration'], language=result['language']
+            segments=result["segments"],
+            duration=result["duration"],
+            language=result["language"],
         )
 
         logger.info(
@@ -244,7 +247,9 @@ class ActiveSession:
 
         # Broadcast final transcript
         await self._broadcast_message(
-            WSFinalTranscriptMessage(type="final_transcript", transcript=self.final_transcript)
+            WSFinalTranscriptMessage(
+                type="final_transcript", transcript=self.final_transcript
+            )
         )
 
     def _on_utterance(self, utterance: Utterance):
@@ -264,7 +269,9 @@ class ActiveSession:
         # Schedule async broadcast
         try:
             asyncio.create_task(
-                self._broadcast_message(WSUtteranceMessage(type="utterance", data=utterance))
+                self._broadcast_message(
+                    WSUtteranceMessage(type="utterance", data=utterance)
+                )
             )
         except RuntimeError:
             # No event loop in this thread - this is expected during shutdown
@@ -348,7 +355,9 @@ class ActiveSession:
         # Broadcast state change (fire and forget)
         try:
             asyncio.create_task(
-                self._broadcast_message(WSStateChangeMessage(type="state_change", state=new_state))
+                self._broadcast_message(
+                    WSStateChangeMessage(type="state_change", state=new_state)
+                )
             )
         except RuntimeError:
             # No event loop - this is expected during initialization
@@ -362,7 +371,9 @@ class ActiveSession:
             TranscriptDocument with all session data
         """
         duration = (
-            (self.ended_at - self.started_at).total_seconds() if self.ended_at and self.started_at else 0.0
+            (self.ended_at - self.started_at).total_seconds()
+            if self.ended_at and self.started_at
+            else 0.0
         )
 
         return TranscriptDocument(
@@ -383,14 +394,14 @@ class ActiveSession:
             Dictionary with session stats
         """
         return {
-            'session_id': self.session_id,
-            'state': self.state.value,
-            'source_count': len(self.pipelines),
-            'websocket_clients': len(self._websocket_clients),
-            'live_utterances': len(self.live_transcript) if self.live_transcript else 0,
-            'final_segments': (
+            "session_id": self.session_id,
+            "state": self.state.value,
+            "source_count": len(self.pipelines),
+            "websocket_clients": len(self._websocket_clients),
+            "live_utterances": len(self.live_transcript) if self.live_transcript else 0,
+            "final_segments": (
                 len(self.final_transcript.segments) if self.final_transcript else 0
             ),
-            'merger_stats': self.merger.get_stats(),
-            'pipelines': [p.get_stats() for p in self.pipelines],
+            "merger_stats": self.merger.get_stats(),
+            "pipelines": [p.get_stats() for p in self.pipelines],
         }

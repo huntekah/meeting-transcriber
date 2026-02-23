@@ -69,8 +69,8 @@ class ColdPathPostProcessor:
 
         logger.info("Loading VAD model for chunking...")
         self._vad_model, _ = torch.hub.load(
-            repo_or_dir='snakers4/silero-vad',
-            model='silero_vad',
+            repo_or_dir="snakers4/silero-vad",
+            model="silero_vad",
             force_reload=False,
             verbose=False,
         )
@@ -149,13 +149,15 @@ class ColdPathPostProcessor:
                 result = self.pipeline.process(str(chunk_path))
 
                 # Adjust timestamps
-                for seg in result['segments']:
-                    seg['start'] += chunk_offset
-                    seg['end'] += chunk_offset
+                for seg in result["segments"]:
+                    seg["start"] += chunk_offset
+                    seg["end"] += chunk_offset
 
-                all_segments.extend(result['segments'])
+                all_segments.extend(result["segments"])
 
-                logger.info(f"Chunk {chunk_idx + 1} done ({len(result['segments'])} segments)")
+                logger.info(
+                    f"Chunk {chunk_idx + 1} done ({len(result['segments'])} segments)"
+                )
 
             except Exception as e:
                 logger.error(f"Chunk {chunk_idx + 1} failed: {e}", exc_info=True)
@@ -165,9 +167,11 @@ class ColdPathPostProcessor:
                 # Cleanup temp file
                 chunk_path.unlink(missing_ok=True)
 
-        logger.info(f"Cold path processing complete ({len(all_segments)} total segments)")
+        logger.info(
+            f"Cold path processing complete ({len(all_segments)} total segments)"
+        )
 
-        return {'segments': all_segments, 'duration': duration, 'language': 'en'}
+        return {"segments": all_segments, "duration": duration, "language": "en"}
 
     def _find_silence_chunks(
         self,
@@ -233,7 +237,7 @@ class ColdPathPostProcessor:
             # Find nearest silence to target_end
             best_split = target_end
             if silence_regions:
-                min_distance = float('inf')
+                min_distance = float("inf")
                 for silence_start, silence_end in silence_regions:
                     silence_mid = (silence_start + silence_end) // 2
                     distance = abs(silence_mid - target_end)

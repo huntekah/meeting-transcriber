@@ -25,13 +25,17 @@ class RecordingScreen(Screen):
         ("escape", "stop_recording", "Stop"),
     ]
 
-    def __init__(self, session_id: str, ws_url: str, client: ASRClient, settings: CLISettings):
+    def __init__(
+        self, session_id: str, ws_url: str, client: ASRClient, settings: CLISettings
+    ):
         super().__init__()
         self.session_id = session_id
         # Ensure WebSocket URL is properly formatted
         if not ws_url.startswith("ws://") and not ws_url.startswith("wss://"):
             # Extract host from API base URL
-            base_url = settings.api_base_url.replace("http://", "").replace("https://", "")
+            base_url = settings.api_base_url.replace("http://", "").replace(
+                "https://", ""
+            )
             self.ws_url = f"ws://{base_url}{ws_url}"
         else:
             self.ws_url = ws_url

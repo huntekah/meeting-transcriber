@@ -42,7 +42,9 @@ class SetupScreen(Screen):
             yield DeviceSelector([], id="mic_selector", label="Select microphone...")
 
             yield Label("System audio (optional):", classes="field_label")
-            yield DeviceSelector([], id="system_selector", label="Select system audio...")
+            yield DeviceSelector(
+                [], id="system_selector", label="Select system audio..."
+            )
 
             yield Static()  # Spacer
 
@@ -123,18 +125,20 @@ class SetupScreen(Screen):
                     SourceConfig(
                         device_index=mic_idx,
                         device_name=device.name,
-                        device_channels=device.channels
+                        device_channels=device.channels,
                     )
                 )
 
         if system_idx is not None:
-            device = next((d for d in self.devices if d.device_index == system_idx), None)
+            device = next(
+                (d for d in self.devices if d.device_index == system_idx), None
+            )
             if device:
                 sources.append(
                     SourceConfig(
                         device_index=system_idx,
                         device_name=device.name,
-                        device_channels=device.channels
+                        device_channels=device.channels,
                     )
                 )
 

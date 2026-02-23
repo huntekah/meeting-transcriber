@@ -44,7 +44,9 @@ class ChronologicalMerger:
             callback: Function to call when new utterance is added
         """
         self._listeners.append(callback)
-        logger.debug(f"Added listener to ChronologicalMerger (total: {len(self._listeners)})")
+        logger.debug(
+            f"Added listener to ChronologicalMerger (total: {len(self._listeners)})"
+        )
 
     def add_utterance(self, utterance: Utterance):
         """
@@ -184,12 +186,12 @@ class ChronologicalMerger:
             )
 
             return {
-                'total_utterances': total_utterances,
-                'overlapping_utterances': overlapping_utterances,
-                'overlap_percentage': (
+                "total_utterances": total_utterances,
+                "overlapping_utterances": overlapping_utterances,
+                "overlap_percentage": (
                     (overlapping_utterances / total_utterances * 100)
                     if total_utterances > 0
                     else 0.0
                 ),
-                'listener_count': len(self._listeners),
+                "listener_count": len(self._listeners),
             }

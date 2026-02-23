@@ -5,8 +5,7 @@ These models ensure type safety when communicating with the ASR service API.
 """
 
 from pydantic import BaseModel
-from typing import List, Optional, Literal, Union
-from datetime import datetime
+from typing import List, Literal, Union
 
 
 class AudioDevice(BaseModel):

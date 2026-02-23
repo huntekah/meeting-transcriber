@@ -17,7 +17,12 @@ from ...deps import get_session_manager, get_model_manager
 router = APIRouter()
 
 
-@router.post("/sessions", response_model=SessionResponse, tags=["sessions"], status_code=status.HTTP_201_CREATED)
+@router.post(
+    "/sessions",
+    response_model=SessionResponse,
+    tags=["sessions"],
+    status_code=status.HTTP_201_CREATED,
+)
 async def create_session(
     config: SessionConfig,
     session_manager: SessionManager = Depends(get_session_manager),
@@ -63,7 +68,9 @@ async def create_session(
 
     except Exception as e:
         logger.error(f"Session creation failed: {e}", exc_info=True)
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e)
+        )
 
 
 @router.post("/sessions/{session_id}/stop", tags=["sessions"])
@@ -92,10 +99,14 @@ async def stop_session(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
     except Exception as e:
         logger.error(f"Session stop failed: {e}", exc_info=True)
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e)
+        )
 
 
-@router.get("/sessions/{session_id}", response_model=TranscriptDocument, tags=["sessions"])
+@router.get(
+    "/sessions/{session_id}", response_model=TranscriptDocument, tags=["sessions"]
+)
 async def get_session_status(
     session_id: str,
     session_manager: SessionManager = Depends(get_session_manager),
@@ -141,7 +152,9 @@ async def list_sessions(
     return {"sessions": sessions}
 
 
-@router.delete("/sessions/{session_id}", tags=["sessions"], status_code=status.HTTP_204_NO_CONTENT)
+@router.delete(
+    "/sessions/{session_id}", tags=["sessions"], status_code=status.HTTP_204_NO_CONTENT
+)
 async def delete_session(
     session_id: str,
     session_manager: SessionManager = Depends(get_session_manager),

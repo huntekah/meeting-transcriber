@@ -12,7 +12,13 @@ from ..models import AudioDevice
 class DeviceSelector(Select):
     """Dropdown for audio device selection."""
 
-    def __init__(self, devices: List[AudioDevice] = None, label: str = "Select device", allow_blank: bool = True, **kwargs):
+    def __init__(
+        self,
+        devices: List[AudioDevice] = None,
+        label: str = "Select device",
+        allow_blank: bool = True,
+        **kwargs,
+    ):
         """
         Initialize device selector.
 

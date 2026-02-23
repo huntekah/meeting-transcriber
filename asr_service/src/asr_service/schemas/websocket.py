@@ -4,7 +4,7 @@ WebSocket message schemas.
 Pydantic models for WebSocket communication between server and clients.
 """
 
-from typing import Literal, Any, Dict
+from typing import Literal
 from pydantic import BaseModel, Field
 from .transcription import Utterance, SessionState, ColdTranscriptResult
 
@@ -47,9 +47,7 @@ class WSStateChangeMessage(BaseModel):
     state: SessionState = Field(..., description="New session state")
 
     class Config:
-        json_schema_extra = {
-            "example": {"type": "state_change", "state": "processing"}
-        }
+        json_schema_extra = {"example": {"type": "state_change", "state": "processing"}}
 
 
 class WSErrorMessage(BaseModel):

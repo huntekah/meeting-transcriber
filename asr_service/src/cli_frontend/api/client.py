@@ -6,7 +6,7 @@ Provides async methods for interacting with session management endpoints.
 
 import httpx
 from typing import List, Optional, Dict, Any
-from ..models import AudioDevice, SourceConfig, SessionResponse
+from ..models import AudioDevice, SourceConfig
 from ..config import CLISettings
 
 

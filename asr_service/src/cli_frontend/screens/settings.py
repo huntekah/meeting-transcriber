@@ -33,11 +33,15 @@ class SettingsScreen(ModalScreen):
                 yield Label("Appearance", classes="section_header")
 
                 with Horizontal(classes="setting_row"):
-                    yield Switch(value=self.settings.show_timestamps, id="show_timestamps")
+                    yield Switch(
+                        value=self.settings.show_timestamps, id="show_timestamps"
+                    )
                     yield Label("Show timestamps")
 
                 with Horizontal(classes="setting_row"):
-                    yield Switch(value=self.settings.show_backchannels, id="show_backchannels")
+                    yield Switch(
+                        value=self.settings.show_backchannels, id="show_backchannels"
+                    )
                     yield Label('Show backchannels ("uh-huh", "yeah")')
 
                 with Horizontal(classes="setting_row"):
@@ -51,12 +55,16 @@ class SettingsScreen(ModalScreen):
 
                 yield Label("Save directory:", classes="field_label")
                 yield Input(
-                    value=self.settings.output_dir, id="output_dir", placeholder="~/Documents/MeetingScribe/"
+                    value=self.settings.output_dir,
+                    id="output_dir",
+                    placeholder="~/Documents/MeetingScribe/",
                 )
 
                 yield Label("API base URL:", classes="field_label")
                 yield Input(
-                    value=self.settings.api_base_url, id="api_base_url", placeholder="http://localhost:8000"
+                    value=self.settings.api_base_url,
+                    id="api_base_url",
+                    placeholder="http://localhost:8000",
                 )
 
                 yield Static()  # Spacer
@@ -77,7 +85,9 @@ class SettingsScreen(ModalScreen):
         """Save settings and dismiss modal."""
         # Update settings object
         self.settings.show_timestamps = self.query_one("#show_timestamps", Switch).value
-        self.settings.show_backchannels = self.query_one("#show_backchannels", Switch).value
+        self.settings.show_backchannels = self.query_one(
+            "#show_backchannels", Switch
+        ).value
         self.settings.auto_scroll = self.query_one("#auto_scroll", Switch).value
         self.settings.output_dir = self.query_one("#output_dir", Input).value
         self.settings.api_base_url = self.query_one("#api_base_url", Input).value

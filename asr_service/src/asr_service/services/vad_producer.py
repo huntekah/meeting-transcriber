@@ -200,7 +200,7 @@ class VADAudioProducer:
                 device=self.device_index,
                 samplerate=self.sample_rate,
                 channels=self.device_channels,  # Use device's actual channels
-                dtype='float32',
+                dtype="float32",
                 blocksize=self.chunk_size,
                 callback=audio_callback,
             ):
@@ -248,9 +248,9 @@ class VADAudioProducer:
 
         # Create segment dictionary
         segment: Dict[str, Any] = {
-            'audio': audio_np,
-            'timestamp': current_time,
-            'source_id': self.source_id,
+            "audio": audio_np,
+            "timestamp": current_time,
+            "source_id": self.source_id,
         }
 
         # Push to queue (non-blocking with timeout)
@@ -284,11 +284,11 @@ class VADAudioProducer:
             Dictionary with statistics
         """
         return {
-            'source_id': self.source_id,
-            'device_name': self.device_name,
-            'is_running': self._thread is not None and self._thread.is_alive(),
-            'total_audio_chunks': len(self._all_audio_chunks),
-            'buffer_size': len(self._growing_buffer),
-            'is_speaking': self._is_speaking,
-            'silence_counter': self._silence_counter,
+            "source_id": self.source_id,
+            "device_name": self.device_name,
+            "is_running": self._thread is not None and self._thread.is_alive(),
+            "total_audio_chunks": len(self._all_audio_chunks),
+            "buffer_size": len(self._growing_buffer),
+            "is_speaking": self._is_speaking,
+            "silence_counter": self._silence_counter,
         }

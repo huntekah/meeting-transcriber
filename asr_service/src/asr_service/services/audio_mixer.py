@@ -50,13 +50,14 @@ class AudioMixer:
         sample_rate = sample_rate or settings.SAMPLE_RATE
 
         logger.info(
-            f"Mixing {len(audio_sources)} sources to mono "
-            f"(output: {output_path.name})"
+            f"Mixing {len(audio_sources)} sources to mono (output: {output_path.name})"
         )
 
         # Pad all sources to same length
         max_length = max(len(audio) for audio in audio_sources)
-        logger.debug(f"Max length: {max_length} samples ({max_length / sample_rate:.2f}s)")
+        logger.debug(
+            f"Max length: {max_length} samples ({max_length / sample_rate:.2f}s)"
+        )
 
         padded = []
         for idx, audio in enumerate(audio_sources):

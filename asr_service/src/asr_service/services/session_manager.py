@@ -25,7 +25,7 @@ class SessionManager:
     Provides session lifecycle management.
     """
 
-    _instance: Optional['SessionManager'] = None
+    _instance: Optional["SessionManager"] = None
 
     def __new__(cls):
         if cls._instance is None:
@@ -165,6 +165,6 @@ class SessionManager:
             Dictionary with statistics
         """
         return {
-            'total_sessions': len(self._sessions),
-            'session_ids': list(self._sessions.keys()),
+            "total_sessions": len(self._sessions),
+            "session_ids": list(self._sessions.keys()),
         }

@@ -42,6 +42,7 @@ class MeetingScribeApp(App):
 
     async def action_settings(self):
         """Show settings modal."""
+
         def on_dismiss(result):
             if result:
                 # Settings were saved

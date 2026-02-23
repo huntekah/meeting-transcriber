@@ -77,7 +77,11 @@ class SourceConfig(BaseModel):
 
     class Config:
         json_schema_extra = {
-            "example": {"device_index": 0, "device_name": "Microphone", "device_channels": 1}
+            "example": {
+                "device_index": 0,
+                "device_name": "Microphone",
+                "device_channels": 1,
+            }
         }
 
 

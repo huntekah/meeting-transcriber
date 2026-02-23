@@ -25,7 +25,7 @@ class ModelManager:
     Supports async loading to not block FastAPI event loop.
     """
 
-    _instance: Optional['ModelManager'] = None
+    _instance: Optional["ModelManager"] = None
     _lock = threading.Lock()
 
     def __new__(cls):
@@ -89,8 +89,8 @@ class ModelManager:
             # Load Silero VAD
             logger.info("Loading Silero VAD model...")
             self.vad_model, _ = torch.hub.load(
-                repo_or_dir='snakers4/silero-vad',
-                model='silero_vad',
+                repo_or_dir="snakers4/silero-vad",
+                model="silero_vad",
                 force_reload=False,
                 verbose=False,
                 onnx=False,
@@ -183,8 +183,8 @@ class ModelManager:
             Dictionary with model status
         """
         return {
-            'models_loaded': self._models_loaded,
-            'vad_loaded': self.vad_model is not None,
-            'cold_pipeline_loaded': self.cold_pipeline is not None,
-            'whisper_model_name': self.whisper_model_name,
+            "models_loaded": self._models_loaded,
+            "vad_loaded": self.vad_model is not None,
+            "cold_pipeline_loaded": self.cold_pipeline is not None,
+            "whisper_model_name": self.whisper_model_name,
         }

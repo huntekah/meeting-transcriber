@@ -103,8 +103,8 @@ class LiveTranscriber:
                 # Get audio segment from queue (timeout to check stop_event)
                 segment = self.input_queue.get(timeout=0.5)
 
-                audio_np: np.ndarray = segment['audio']
-                capture_timestamp: float = segment['timestamp']
+                audio_np: np.ndarray = segment["audio"]
+                capture_timestamp: float = segment["timestamp"]
 
                 # Skip if too short (should be filtered by producer, but double-check)
                 min_samples = int(settings.MIN_AUDIO_LENGTH * settings.SAMPLE_RATE)
@@ -117,7 +117,7 @@ class LiveTranscriber:
                 inference_time = time.time() - start_time
 
                 # Skip empty transcriptions
-                if not result['text'].strip():
+                if not result["text"].strip():
                     logger.debug(
                         f"Empty transcription for source {self.source_id}, skipping"
                     )
@@ -132,8 +132,8 @@ class LiveTranscriber:
                     source_id=self.source_id,
                     start_time=capture_timestamp,
                     end_time=end_timestamp,
-                    text=result['text'],
-                    confidence=result.get('confidence', 1.0),
+                    text=result["text"],
+                    confidence=result.get("confidence", 1.0),
                     is_final=True,
                     overlaps_with=[],
                 )
@@ -147,7 +147,7 @@ class LiveTranscriber:
 
                 logger.debug(
                     f"Transcribed segment for source {self.source_id}: "
-                    f"'{result['text'][:50]}...' ({duration:.2f}s, RTF={inference_time/duration:.3f})"
+                    f"'{result['text'][:50]}...' ({duration:.2f}s, RTF={inference_time / duration:.3f})"
                 )
 
             except queue.Empty:
@@ -189,8 +189,9 @@ class LiveTranscriber:
             import mlx_whisper
 
             # Suppress MLX output
-            with contextlib.redirect_stdout(open(os.devnull, 'w')), contextlib.redirect_stderr(
-                open(os.devnull, 'w')
+            with (
+                contextlib.redirect_stdout(open(os.devnull, "w")),
+                contextlib.redirect_stderr(open(os.devnull, "w")),
             ):
                 result = mlx_whisper.transcribe(
                     audio_np,
@@ -208,10 +209,12 @@ class LiveTranscriber:
                 )
 
             # Extract text from segments
-            segments = result.get('segments', [])
-            text = " ".join([seg['text'].strip() for seg in segments if seg['text'].strip()])
+            segments = result.get("segments", [])
+            text = " ".join(
+                [seg["text"].strip() for seg in segments if seg["text"].strip()]
+            )
 
-            return {'text': text, 'confidence': 1.0}  # MLX doesn't provide confidence
+            return {"text": text, "confidence": 1.0}  # MLX doesn't provide confidence
 
         except Exception as e:
             logger.error(
@@ -228,10 +231,10 @@ class LiveTranscriber:
             Dictionary with statistics
         """
         return {
-            'source_id': self.source_id,
-            'is_running': self._thread is not None and self._thread.is_alive(),
-            'total_segments': self._total_segments,
-            'total_inference_time': self._total_inference_time,
-            'error_count': self._error_count,
-            'queue_size': self.input_queue.qsize(),
+            "source_id": self.source_id,
+            "is_running": self._thread is not None and self._thread.is_alive(),
+            "total_segments": self._total_segments,
+            "total_inference_time": self._total_inference_time,
+            "error_count": self._error_count,
+            "queue_size": self.input_queue.qsize(),
         }

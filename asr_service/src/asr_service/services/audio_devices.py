@@ -32,13 +32,13 @@ def list_audio_devices() -> List[AudioDevice]:
         # Filter for input devices only
         for idx, device in enumerate(all_devices):
             # Only include devices with input channels
-            if device['max_input_channels'] > 0:
+            if device["max_input_channels"] > 0:
                 input_devices.append(
                     AudioDevice(
                         device_index=idx,
-                        name=device['name'],
-                        channels=device['max_input_channels'],
-                        sample_rate=int(device['default_samplerate']),
+                        name=device["name"],
+                        channels=device["max_input_channels"],
+                        sample_rate=int(device["default_samplerate"]),
                         is_default=(idx == default_input_device),
                     )
                 )

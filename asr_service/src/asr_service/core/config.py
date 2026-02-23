@@ -16,7 +16,7 @@ class Settings(BaseSettings):
     model_config = ConfigDict(
         env_file=Path(__file__).parent.parent.parent.parent / ".env",
         case_sensitive=True,
-        extra='ignore',  # Allow extra fields in .env
+        extra="ignore",  # Allow extra fields in .env
     )
 
     # Whisper models

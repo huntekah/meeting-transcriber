@@ -11,7 +11,6 @@ from typing import Callable, Dict, Any
 import numpy as np
 import torch
 
-from ..core.config import settings
 from ..core.logging import logger
 from ..schemas.transcription import Utterance
 from .vad_producer import VADAudioProducer
@@ -150,9 +149,9 @@ class SourcePipeline:
             Dictionary with producer and consumer stats
         """
         return {
-            'source_id': self.source_id,
-            'device_name': self.device_name,
-            'producer': self.producer.get_stats(),
-            'transcriber': self.transcriber.get_stats(),
-            'queue_size': self._audio_queue.qsize(),
+            "source_id": self.source_id,
+            "device_name": self.device_name,
+            "producer": self.producer.get_stats(),
+            "transcriber": self.transcriber.get_stats(),
+            "queue_size": self._audio_queue.qsize(),
         }

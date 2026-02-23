@@ -1,6 +1,5 @@
 import logging
 import sys
-from typing import Optional
 
 
 def setup_logging(level: str = "INFO") -> logging.Logger:
@@ -23,7 +22,7 @@ def setup_logging(level: str = "INFO") -> logging.Logger:
     # Format: timestamp - name - level - message
     formatter = logging.Formatter(
         "%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-        datefmt="%Y-%m-%d %H:%M:%S"
+        datefmt="%Y-%m-%d %H:%M:%S",
     )
     handler.setFormatter(formatter)
 
