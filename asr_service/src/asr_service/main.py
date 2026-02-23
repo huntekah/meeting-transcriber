@@ -30,10 +30,10 @@ async def lifespan(app: FastAPI):
     logger.info(f"Output directory: {settings.OUTPUT_DIR}")
     logger.info("=" * 80)
 
-    # Optional: Pre-load models (can also lazy-load on first request)
-    # model_manager = ModelManager()
-    # await model_manager.load_models()
-    # logger.info("Models pre-loaded")
+    # Pre-load models on startup for better UX (no delay on first utterance)
+    model_manager = ModelManager()
+    await model_manager.load_models()
+    logger.info("Models pre-loaded successfully")
 
     yield
 

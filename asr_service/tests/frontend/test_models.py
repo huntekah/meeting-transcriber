@@ -4,13 +4,10 @@ Tests for CLI frontend models.
 Tests Pydantic model validation and serialization.
 """
 
-import pytest
-from pydantic import ValidationError
 from cli_frontend.models import (
     AudioDevice,
     SourceConfig,
     Utterance,
-    SessionResponse,
     WSUtteranceMessage,
     WSStateChangeMessage,
     WSErrorMessage,

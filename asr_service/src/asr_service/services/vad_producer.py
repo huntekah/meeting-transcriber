@@ -17,6 +17,10 @@ from ..core.config import settings
 from ..core.logging import logger
 from ..core.exceptions import AudioCaptureError
 
+# Global lock to serialize VAD model access across all sources
+# Silero VAD is NOT thread-safe - internal RNN state gets corrupted with concurrent calls
+_VAD_MODEL_LOCK = threading.Lock()
+
 
 class VADAudioProducer:
     """
@@ -78,8 +82,12 @@ class VADAudioProducer:
         # Audio recording for final save
         self._all_audio_chunks: list[np.ndarray] = []
 
+        # VAD processing queue (callback -> VAD thread)
+        self._vad_queue: queue.Queue = queue.Queue(maxsize=100)
+
         # Thread lifecycle
         self._thread: threading.Thread | None = None
+        self._vad_thread: threading.Thread | None = None
         self._stop_event = threading.Event()
 
         # Session timing
@@ -87,7 +95,7 @@ class VADAudioProducer:
 
     def start(self, session_start_time: float | None = None):
         """
-        Start audio capture thread.
+        Start audio capture and VAD processing threads.
 
         Args:
             session_start_time: Unix timestamp of session start (default: current time)
@@ -100,15 +108,22 @@ class VADAudioProducer:
 
         self._session_start_time = session_start_time or time.time()
         self._stop_event.clear()
+
+        # Start VAD processing thread first (processes audio from queue)
+        self._vad_thread = threading.Thread(target=self._vad_processing_loop, daemon=True)
+        self._vad_thread.start()
+
+        # Then start audio capture thread (feeds VAD queue)
         self._thread = threading.Thread(target=self._capture_loop, daemon=True)
         self._thread.start()
+
         logger.info(
             f"VADAudioProducer {self.source_id} started for device '{self.device_name}'"
         )
 
     def stop(self):
         """
-        Gracefully stop audio capture.
+        Gracefully stop audio capture and VAD processing.
 
         Finalizes any pending audio in the buffer before shutdown.
         """
@@ -118,9 +133,13 @@ class VADAudioProducer:
         logger.info(f"Stopping VADAudioProducer {self.source_id}...")
         self._stop_event.set()
 
-        # Wait for thread to finish
+        # Wait for capture thread to finish
         if self._thread.is_alive():
             self._thread.join(timeout=2.0)
+
+        # Wait for VAD thread to finish
+        if self._vad_thread and self._vad_thread.is_alive():
+            self._vad_thread.join(timeout=2.0)
 
         # Finalize any remaining audio
         with self._buffer_lock:
@@ -143,6 +162,9 @@ class VADAudioProducer:
             """
             Audio callback invoked by sounddevice for each chunk.
 
+            IMPORTANT: Minimal work here - just capture audio and queue it.
+            VAD processing happens in _vad_processing_loop (separate thread).
+
             Args:
                 indata: Audio data (frames, channels)
                 frames: Number of frames
@@ -164,34 +186,12 @@ class VADAudioProducer:
             # Save for final mixed file
             self._all_audio_chunks.append(audio_chunk)
 
-            # Append to growing buffer
-            with self._buffer_lock:
-                self._growing_buffer.append(audio_chunk)
-
-            # Run VAD
+            # Queue for VAD processing (non-blocking)
             try:
-                audio_tensor = torch.from_numpy(audio_chunk)
-                vad_prob = self.vad_model(audio_tensor, self.sample_rate).item()
-
-                # VAD state machine
-                if vad_prob > self.vad_threshold:
-                    # Speech detected
-                    self._is_speaking = True
-                    self._silence_counter = 0
-                else:
-                    # Silence detected
-                    if self._is_speaking:
-                        self._silence_counter += 1
-                        if self._silence_counter >= self.silence_chunks:
-                            # Enough silence - finalize segment
-                            self._finalize_segment()
-                            self._is_speaking = False
-                            self._silence_counter = 0
-
-            except Exception as e:
-                logger.error(
-                    f"VAD error for source {self.source_id}: {e}", exc_info=True
-                )
+                self._vad_queue.put_nowait(audio_chunk)
+            except queue.Full:
+                # Drop frame if queue is full (shouldn't happen with maxsize=100)
+                logger.warning(f"VAD queue full for source {self.source_id}, dropping frame")
 
         try:
             # Open audio stream with device's actual channel count
@@ -219,6 +219,70 @@ class VADAudioProducer:
                 exc_info=True,
             )
             raise AudioCaptureError(self.device_index, str(e))
+
+    def _vad_processing_loop(self):
+        """
+        VAD processing loop (runs in separate Python thread).
+
+        Safely processes audio from _vad_queue and runs VAD model.
+        This runs in a proper Python thread (not C callback), so PyTorch is safe.
+        """
+        logger.info(f"VAD processing thread started for source {self.source_id}")
+
+        while not self._stop_event.is_set():
+            try:
+                # Get audio chunk from queue (blocking with timeout)
+                try:
+                    audio_chunk = self._vad_queue.get(timeout=0.1)
+                except queue.Empty:
+                    continue
+
+                # Append to growing buffer
+                with self._buffer_lock:
+                    self._growing_buffer.append(audio_chunk)
+
+                # Run VAD (safe to call PyTorch model from Python thread)
+                # IMPORTANT: Use global lock to serialize VAD calls across all sources
+                try:
+                    audio_tensor = torch.from_numpy(audio_chunk)
+
+                    # Serialize VAD model access - model is NOT thread-safe
+                    with _VAD_MODEL_LOCK:
+                        vad_prob = self.vad_model(audio_tensor, self.sample_rate).item()
+
+                    # VAD state machine
+                    if vad_prob > self.vad_threshold:
+                        # Speech detected
+                        if not self._is_speaking:
+                            logger.debug(f"[Source {self.source_id}] Speech START (VAD prob: {vad_prob:.3f})")
+                        self._is_speaking = True
+                        self._silence_counter = 0
+                    else:
+                        # Silence detected
+                        if self._is_speaking:
+                            self._silence_counter += 1
+                            if self._silence_counter >= self.silence_chunks:
+                                # Enough silence - finalize segment
+                                logger.debug(
+                                    f"[Source {self.source_id}] Speech END (silence chunks: {self._silence_counter})"
+                                )
+                                with self._buffer_lock:
+                                    self._finalize_segment()
+                                self._is_speaking = False
+                                self._silence_counter = 0
+
+                except Exception as e:
+                    logger.error(
+                        f"VAD error for source {self.source_id}: {e}", exc_info=True
+                    )
+
+            except Exception as e:
+                logger.error(
+                    f"VAD processing loop error for source {self.source_id}: {e}",
+                    exc_info=True,
+                )
+
+        logger.info(f"VAD processing thread stopped for source {self.source_id}")
 
     def _finalize_segment(self):
         """

@@ -1,5 +1,3 @@
-import pytest
-import os
 from pathlib import Path
 from asr_service.core.config import Settings
 

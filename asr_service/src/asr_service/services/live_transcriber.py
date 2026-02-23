@@ -18,6 +18,10 @@ from ..core.logging import logger
 from ..core.exceptions import TranscriptionError
 from ..schemas.transcription import Utterance
 
+# Global lock to serialize MLX Whisper calls across all sources
+# MLX might not be fully thread-safe for concurrent transcriptions
+_MLX_WHISPER_LOCK = threading.Lock()
+
 
 class LiveTranscriber:
     """
@@ -103,6 +107,11 @@ class LiveTranscriber:
                 # Get audio segment from queue (timeout to check stop_event)
                 segment = self.input_queue.get(timeout=0.5)
 
+                # Double-check stop event after getting item (might have been set during wait)
+                if self._stop_event.is_set():
+                    logger.debug(f"LiveTranscriber {self.source_id} stopping, skipping segment")
+                    break
+
                 audio_np: np.ndarray = segment["audio"]
                 capture_timestamp: float = segment["timestamp"]
 
@@ -123,6 +132,11 @@ class LiveTranscriber:
                     )
                     continue
 
+                # Check again before callback (might be shutting down)
+                if self._stop_event.is_set():
+                    logger.debug(f"LiveTranscriber {self.source_id} stopping, skipping callback")
+                    break
+
                 # Calculate timing
                 duration = len(audio_np) / settings.SAMPLE_RATE
                 end_timestamp = capture_timestamp + duration
@@ -138,8 +152,12 @@ class LiveTranscriber:
                     overlaps_with=[],
                 )
 
-                # Send to merger via callback
-                self.output_callback(utterance)
+                # Send to merger via callback (only if not shutting down)
+                try:
+                    self.output_callback(utterance)
+                except Exception as callback_error:
+                    # Don't crash the thread if callback fails
+                    logger.error(f"Callback error for source {self.source_id}: {callback_error}")
 
                 # Update stats
                 self._total_segments += 1
@@ -161,19 +179,20 @@ class LiveTranscriber:
                     exc_info=True,
                 )
 
-                # Send error utterance via callback
-                try:
-                    error_utterance = Utterance(
-                        source_id=self.source_id,
-                        start_time=time.time(),
-                        end_time=time.time(),
-                        text=f"[TRANSCRIPTION ERROR: {str(e)}]",
-                        confidence=0.0,
-                        is_final=False,
-                    )
-                    self.output_callback(error_utterance)
-                except Exception as callback_error:
-                    logger.error(f"Callback error: {callback_error}")
+                # Send error utterance via callback (only if not shutting down)
+                if not self._stop_event.is_set():
+                    try:
+                        error_utterance = Utterance(
+                            source_id=self.source_id,
+                            start_time=time.time(),
+                            end_time=time.time(),
+                            text=f"[TRANSCRIPTION ERROR: {str(e)}]",
+                            confidence=0.0,
+                            is_final=False,
+                        )
+                        self.output_callback(error_utterance)
+                    except Exception as callback_error:
+                        logger.error(f"Callback error: {callback_error}")
 
     def _transcribe(self, audio_np: np.ndarray) -> Dict[str, Any]:
         """
@@ -188,25 +207,27 @@ class LiveTranscriber:
         try:
             import mlx_whisper
 
-            # Suppress MLX output
-            with (
-                contextlib.redirect_stdout(open(os.devnull, "w")),
-                contextlib.redirect_stderr(open(os.devnull, "w")),
-            ):
-                result = mlx_whisper.transcribe(
-                    audio_np,
-                    path_or_hf_repo=self.whisper_model_name,
-                    language=self.language,
-                    # CRITICAL: No initial_prompt for MLX (causes hallucinations)
-                    condition_on_previous_text=False,
-                    # Anti-hallucination settings
-                    temperature=0.0,  # Greedy decoding only
-                    compression_ratio_threshold=2.4,
-                    logprob_threshold=-1.0,
-                    no_speech_threshold=0.6,
-                    word_timestamps=False,
-                    verbose=False,
-                )
+            # CRITICAL: Serialize MLX calls across all sources to prevent threading issues
+            with _MLX_WHISPER_LOCK:
+                # Suppress MLX output
+                with (
+                    contextlib.redirect_stdout(open(os.devnull, "w")),
+                    contextlib.redirect_stderr(open(os.devnull, "w")),
+                ):
+                    result = mlx_whisper.transcribe(
+                        audio_np,
+                        path_or_hf_repo=self.whisper_model_name,
+                        language=self.language,
+                        # CRITICAL: No initial_prompt for MLX (causes hallucinations)
+                        condition_on_previous_text=False,
+                        # Anti-hallucination settings
+                        temperature=0.0,  # Greedy decoding only
+                        compression_ratio_threshold=2.4,
+                        logprob_threshold=-1.0,
+                        no_speech_threshold=0.6,
+                        word_timestamps=False,
+                        verbose=False,
+                    )
 
             # Extract text from segments
             segments = result.get("segments", [])

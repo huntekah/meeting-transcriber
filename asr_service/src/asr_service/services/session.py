@@ -85,6 +85,7 @@ class ActiveSession:
         # WebSocket connections
         self._websocket_clients: List[WebSocket] = []
         self._ws_lock = asyncio.Lock()
+        self._event_loop: Optional[asyncio.AbstractEventLoop] = None  # Store event loop for thread-safe async calls
 
         # Results
         self.live_transcript: Optional[List[Utterance]] = None
@@ -111,6 +112,10 @@ class ActiveSession:
         """
         try:
             logger.info(f"Initializing session {self.session_id}...")
+
+            # Store event loop for thread-safe async calls from pipeline threads
+            self._event_loop = asyncio.get_running_loop()
+            logger.debug(f"Captured event loop: {self._event_loop}")
 
             # Load models
             await self.model_manager.load_models()
@@ -266,16 +271,28 @@ class ActiveSession:
 
         Runs in pipeline thread context, so we need to schedule async broadcast.
         """
-        # Schedule async broadcast
-        try:
-            asyncio.create_task(
-                self._broadcast_message(
-                    WSUtteranceMessage(type="utterance", data=utterance)
-                )
+        logger.debug(
+            f"Broadcasting utterance from source {utterance.source_id}: "
+            f"'{utterance.text[:50]}...' (clients: {len(self._websocket_clients)})"
+        )
+
+        # Use stored event loop (set during initialize())
+        if self._event_loop is None:
+            logger.warning(
+                f"Event loop not set - utterance from source {utterance.source_id} NOT sent"
             )
-        except RuntimeError:
-            # No event loop in this thread - this is expected during shutdown
-            logger.debug("No event loop for WebSocket broadcast (shutdown)")
+            return
+
+        # Schedule async broadcast using thread-safe method (fire-and-forget)
+        message = WSUtteranceMessage(type="utterance", data=utterance)
+        try:
+            asyncio.run_coroutine_threadsafe(
+                self._broadcast_message(message),
+                self._event_loop
+            )
+            logger.debug(f"Utterance broadcast scheduled to event loop {self._event_loop}")
+        except Exception as e:
+            logger.error(f"Failed to schedule utterance broadcast: {e}", exc_info=True)
 
     async def _broadcast_message(self, message):
         """
@@ -353,15 +370,20 @@ class ActiveSession:
         logger.info(f"Session {self.session_id}: {old_state.value} → {new_state.value}")
 
         # Broadcast state change (fire and forget)
+        if self._event_loop is None:
+            # No event loop yet - this is expected during initialization before initialize() is called
+            logger.debug(f"Event loop not yet set, skipping state broadcast for {new_state.value}")
+            return
+
+        # Schedule async broadcast using thread-safe method
+        message = WSStateChangeMessage(type="state_change", state=new_state)
         try:
-            asyncio.create_task(
-                self._broadcast_message(
-                    WSStateChangeMessage(type="state_change", state=new_state)
-                )
+            asyncio.run_coroutine_threadsafe(
+                self._broadcast_message(message),
+                self._event_loop
             )
-        except RuntimeError:
-            # No event loop - this is expected during initialization
-            pass
+        except Exception as e:
+            logger.error(f"Failed to schedule state broadcast: {e}", exc_info=True)
 
     def get_document(self) -> TranscriptDocument:
         """

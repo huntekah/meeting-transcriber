@@ -15,7 +15,8 @@ class ASRClient:
 
     def __init__(self, settings: CLISettings):
         self.base_url = settings.api_base_url
-        self.client = httpx.AsyncClient(base_url=self.base_url, timeout=30.0)
+        # 60s timeout to accommodate cold path processing (can take 25-30s)
+        self.client = httpx.AsyncClient(base_url=self.base_url, timeout=60.0)
 
     async def get_devices(self) -> List[AudioDevice]:
         """

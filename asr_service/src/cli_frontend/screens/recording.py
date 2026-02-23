@@ -14,6 +14,7 @@ from ..api.client import ASRClient
 from ..api.websocket import WSClient
 from ..config import CLISettings
 from ..models import WSUtteranceMessage, WSStateChangeMessage
+from ..logging import logger
 
 
 class RecordingScreen(Screen):
@@ -62,12 +63,17 @@ class RecordingScreen(Screen):
 
     async def on_mount(self):
         """Start WebSocket connection when mounted."""
+        logger.info(f"RecordingScreen mounted for session {self.session_id}")
+        logger.info(f"WebSocket URL: {self.ws_url}")
+
         status_bar = self.query_one("#status_bar", StatusBar)
         status_bar.start_recording()
 
         # Start WebSocket connection
+        logger.info("Starting WebSocket client...")
         self.ws_client = WSClient(self.ws_url)
         self.ws_client.start(self.on_ws_message)
+        logger.info("WebSocket client started")
 
     async def on_ws_message(self, data: dict):
         """
@@ -77,19 +83,28 @@ class RecordingScreen(Screen):
             data: Parsed JSON message from WebSocket
         """
         msg_type = data.get("type")
+        logger.info(f"Received WebSocket message type: {msg_type}")
 
         if msg_type == "utterance":
             # New transcription utterance
             try:
+                logger.info(f"Processing utterance message: {data}")
                 msg = WSUtteranceMessage(**data)
+                logger.info(f"Parsed utterance: source={msg.data.source_id}, text='{msg.data.text[:50]}...'")
+
                 transcript = self.query_one("#transcript", TranscriptView)
+                logger.debug(f"Got TranscriptView widget: {transcript}")
+
                 transcript.add_utterance(msg.data)
+                logger.info(f"Utterance added to transcript view")
+
             except Exception as e:
-                print(f"Error processing utterance: {e}")
+                logger.error(f"Error processing utterance: {e}", exc_info=True)
 
         elif msg_type == "state_change":
             # Session state transition
             try:
+                logger.info(f"Processing state change: {data}")
                 msg = WSStateChangeMessage(**data)
                 self.state = msg.state
                 status_bar = self.query_one("#status_bar", StatusBar)
@@ -106,19 +121,26 @@ class RecordingScreen(Screen):
                 elif msg.state == "failed":
                     status_bar.set_status("❌ Failed")
 
+                logger.info(f"State changed to: {msg.state}")
+
             except Exception as e:
-                print(f"Error processing state change: {e}")
+                logger.error(f"Error processing state change: {e}", exc_info=True)
 
         elif msg_type == "final_transcript":
             # Final cold path transcript ready
+            logger.info("Received final transcript")
             status_bar = self.query_one("#status_bar", StatusBar)
             status_bar.set_status("✓ Final transcript ready")
 
         elif msg_type == "error":
             # Error notification
             message = data.get("message", "Unknown error")
+            logger.error(f"Received error message: {message}")
             status_bar = self.query_one("#status_bar", StatusBar)
             status_bar.set_status(f"❌ Error: {message}")
+
+        else:
+            logger.warning(f"Unknown message type: {msg_type}")
 
     async def action_stop_recording(self):
         """Handle stop recording action."""

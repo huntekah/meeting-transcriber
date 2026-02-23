@@ -114,3 +114,4 @@ Temporary Items
 .apdisk
 .DS_Store
 .mypy_cache
+**/output/*wav

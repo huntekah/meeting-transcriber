@@ -27,6 +27,7 @@ class ModelManager:
 
     _instance: Optional["ModelManager"] = None
     _lock = threading.Lock()
+    _cold_pipeline_lock = threading.Lock()  # Serialize cold pipeline access (Numba/pyannote not thread-safe)
 
     def __new__(cls):
         if cls._instance is None:
@@ -81,12 +82,12 @@ class ModelManager:
         Synchronous model loading (runs in executor).
 
         Loads:
-        1. Silero VAD model
-        2. MLX-Whisper model name (actual model loads on first transcribe)
+        1. Silero VAD model (shared reference for creating instances)
+        2. MLX-Whisper model (pre-loaded with dummy transcription)
         3. Cold path pipeline (lazy - only when cold processing needed)
         """
         try:
-            # Load Silero VAD
+            # Load Silero VAD (this creates a shared model we'll use to get fresh instances)
             logger.info("Loading Silero VAD model...")
             self.vad_model, _ = torch.hub.load(
                 repo_or_dir="snakers4/silero-vad",
@@ -97,8 +98,10 @@ class ModelManager:
             )
             logger.info("Silero VAD model loaded")
 
-            # MLX-Whisper loads lazily on first transcribe call
-            logger.info(f"MLX-Whisper model: {self.whisper_model_name}")
+            # Pre-load MLX-Whisper by running dummy transcription
+            logger.info(f"Pre-loading MLX-Whisper model: {self.whisper_model_name}")
+            self._preload_mlx_whisper()
+            logger.info("MLX-Whisper model pre-loaded")
 
             # Cold pipeline is lazy-loaded only when needed
             logger.info("Cold path pipeline will be loaded on demand")
@@ -106,6 +109,35 @@ class ModelManager:
         except Exception as e:
             logger.error(f"Model loading failed: {e}", exc_info=True)
             raise ModelLoadingError("VAD/Whisper", str(e))
+
+    def _preload_mlx_whisper(self):
+        """
+        Pre-load MLX Whisper by running a dummy transcription.
+
+        This loads the model into memory so the first real transcription is fast.
+        """
+        try:
+            import mlx_whisper
+            import numpy as np
+
+            # Create 1 second of silence
+            dummy_audio = np.zeros(16000, dtype=np.float32)
+
+            logger.info("Running dummy transcription to load MLX Whisper...")
+
+            # This will load the model into memory
+            mlx_whisper.transcribe(
+                dummy_audio,
+                path_or_hf_repo=self.whisper_model_name,
+                language="en",
+                verbose=False,
+            )
+
+            logger.info("MLX Whisper model loaded into memory")
+
+        except Exception as e:
+            logger.warning(f"MLX Whisper pre-load failed (non-critical): {e}")
+            # Don't raise - this is optimization, not required
 
     def get_cold_pipeline(self):
         """
@@ -121,7 +153,7 @@ class ModelManager:
 
         try:
             # Add scripts directory to path
-            scripts_dir = Path(__file__).parent.parent.parent.parent.parent / "scripts"
+            scripts_dir = Path(__file__).parent.parent.parent.parent / "scripts"
             if str(scripts_dir) not in sys.path:
                 sys.path.insert(0, str(scripts_dir))
 

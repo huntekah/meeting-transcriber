@@ -1,4 +1,3 @@
-import pytest
 from pathlib import Path
 from asr_service.utils.file_ops import create_temp_file, validate_mime_type
 

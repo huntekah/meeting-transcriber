@@ -120,7 +120,10 @@ class ColdPathPostProcessor:
         # If short enough, process directly
         if duration <= chunk_duration:
             logger.info(f"Audio ≤ {chunk_duration}s, processing directly")
-            return self.pipeline.process(str(audio_path))
+            # CRITICAL: Serialize pipeline access (pyannote/Numba not thread-safe)
+            from .model_manager import ModelManager
+            with ModelManager._cold_pipeline_lock:
+                return self.pipeline.process(str(audio_path))
 
         # Find silence boundaries for chunking
         logger.info(f"Finding silence boundaries for {chunk_duration}s chunks...")
@@ -145,8 +148,10 @@ class ColdPathPostProcessor:
             sf.write(chunk_path, chunk_audio, sr)
 
             try:
-                # Process chunk
-                result = self.pipeline.process(str(chunk_path))
+                # Process chunk (with lock for thread safety)
+                from .model_manager import ModelManager
+                with ModelManager._cold_pipeline_lock:
+                    result = self.pipeline.process(str(chunk_path))
 
                 # Adjust timestamps
                 for seg in result["segments"]:

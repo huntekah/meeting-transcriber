@@ -4,7 +4,6 @@ Tests for CLI frontend widgets.
 Tests StatusBar, TranscriptView, and DeviceSelector widgets.
 """
 
-import pytest
 from cli_frontend.widgets.status_bar import StatusBar
 from cli_frontend.widgets.transcript_view import TranscriptView
 from cli_frontend.widgets.device_selector import DeviceSelector

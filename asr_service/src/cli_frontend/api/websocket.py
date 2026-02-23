@@ -9,6 +9,7 @@ import websockets
 import json
 from typing import Callable, Optional
 from websockets.exceptions import ConnectionClosed
+from ..logging import logger
 
 
 class WSClient:
@@ -28,34 +29,42 @@ class WSClient:
             on_message: Async callback function called for each message.
                         Receives dict with parsed JSON data.
         """
+        logger.info(f"Connecting to WebSocket: {self.ws_url}")
+        message_count = 0
         try:
             async with websockets.connect(self.ws_url) as websocket:
                 self.websocket = websocket
                 self._running = True
-
+                logger.info(f"WebSocket connected successfully")
                 while self._running:
                     try:
                         message = await websocket.recv()
+                        message_count += 1
+                        logger.debug(f"Received message #{message_count}: {message[:100]}...")
                         data = json.loads(message)
+                        logger.debug(f"Parsed message type: {data.get('type')}")
                         await on_message(data)
+                        logger.debug(f"Message handler completed")
                     except ConnectionClosed:
+                        logger.info("WebSocket connection closed")
                         break
                     except json.JSONDecodeError as e:
                         # Log but don't crash on malformed JSON
-                        print(f"JSON decode error: {e}")
+                        logger.error(f"JSON decode error: {e}")
                         continue
                     except Exception as e:
                         # Log but don't crash on callback errors
-                        print(f"Message handler error: {e}")
+                        logger.error(f"Message handler error: {e}", exc_info=True)
                         continue
 
         except ConnectionClosed:
-            pass
+            logger.info("WebSocket connection closed gracefully")
         except Exception as e:
-            print(f"WebSocket connection error: {e}")
+            logger.error(f"WebSocket connection error: {e}", exc_info=True)
         finally:
             self._running = False
             self.websocket = None
+            logger.info(f"WebSocket disconnected (received {message_count} messages total)")
 
     def start(self, on_message: Callable) -> asyncio.Task:
         """
