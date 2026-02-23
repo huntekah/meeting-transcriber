@@ -24,6 +24,7 @@ class SourceConfig(BaseModel):
 
     device_index: int
     device_name: str
+    device_channels: int = 1  # Default to mono
 
 
 class Utterance(BaseModel):

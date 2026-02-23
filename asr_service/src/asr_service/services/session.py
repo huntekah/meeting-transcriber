@@ -125,6 +125,7 @@ class ActiveSession:
                     vad_model=self.model_manager.vad_model,
                     whisper_model_name=self.model_manager.whisper_model_name,
                     utterance_callback=self._on_utterance,
+                    device_channels=source_config.device_channels,
                     language="en",
                 )
                 self.pipelines.append(pipeline)

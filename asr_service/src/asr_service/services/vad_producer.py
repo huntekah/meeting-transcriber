@@ -35,6 +35,7 @@ class VADAudioProducer:
         device_name: str,
         vad_model: torch.nn.Module,
         output_queue: queue.Queue,
+        device_channels: int = 1,
         sample_rate: int | None = None,
         chunk_size: int | None = None,
         vad_threshold: float | None = None,
@@ -49,6 +50,7 @@ class VADAudioProducer:
             device_name: Human-readable device name
             vad_model: Silero VAD model
             output_queue: Queue to push finalized segments
+            device_channels: Number of input channels the device supports (default 1)
             sample_rate: Sample rate in Hz (default from settings)
             chunk_size: Samples per chunk (default from settings)
             vad_threshold: Speech probability threshold (default from settings)
@@ -61,6 +63,7 @@ class VADAudioProducer:
         self.output_queue = output_queue
 
         # Audio settings
+        self.device_channels = device_channels
         self.sample_rate = sample_rate or settings.SAMPLE_RATE
         self.chunk_size = chunk_size or settings.CHUNK_SIZE
         self.vad_threshold = vad_threshold or settings.VAD_THRESHOLD
@@ -150,7 +153,13 @@ class VADAudioProducer:
                 logger.warning(f"Audio stream status: {status}")
 
             # Convert to mono float32
-            audio_chunk = indata[:, 0].astype(np.float32).copy()
+            # If stereo/multi-channel, average across channels (proper downmix)
+            if self.device_channels > 1:
+                # indata shape: (frames, channels) - average to mono
+                audio_chunk = indata.mean(axis=1).astype(np.float32)
+            else:
+                # Already mono, just flatten
+                audio_chunk = indata.flatten().astype(np.float32)
 
             # Save for final mixed file
             self._all_audio_chunks.append(audio_chunk)
@@ -185,11 +194,12 @@ class VADAudioProducer:
                 )
 
         try:
-            # Open audio stream
+            # Open audio stream with device's actual channel count
+            # This prevents audio routing issues on stereo devices like BlackHole
             with sd.InputStream(
                 device=self.device_index,
                 samplerate=self.sample_rate,
-                channels=1,
+                channels=self.device_channels,  # Use device's actual channels
                 dtype='float32',
                 blocksize=self.chunk_size,
                 callback=audio_callback,

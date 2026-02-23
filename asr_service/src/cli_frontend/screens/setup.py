@@ -119,12 +119,24 @@ class SetupScreen(Screen):
         if mic_idx is not None:
             device = next((d for d in self.devices if d.device_index == mic_idx), None)
             if device:
-                sources.append(SourceConfig(device_index=mic_idx, device_name=device.name))
+                sources.append(
+                    SourceConfig(
+                        device_index=mic_idx,
+                        device_name=device.name,
+                        device_channels=device.channels
+                    )
+                )
 
         if system_idx is not None:
             device = next((d for d in self.devices if d.device_index == system_idx), None)
             if device:
-                sources.append(SourceConfig(device_index=system_idx, device_name=device.name))
+                sources.append(
+                    SourceConfig(
+                        device_index=system_idx,
+                        device_name=device.name,
+                        device_channels=device.channels
+                    )
+                )
 
         if not sources:
             status.update("❌ Invalid device selection")

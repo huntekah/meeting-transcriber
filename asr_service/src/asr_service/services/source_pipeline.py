@@ -34,6 +34,7 @@ class SourcePipeline:
         vad_model: torch.nn.Module,
         whisper_model_name: str,
         utterance_callback: Callable[[Utterance], None],
+        device_channels: int = 1,
         language: str = "en",
     ):
         """
@@ -46,6 +47,7 @@ class SourcePipeline:
             vad_model: Silero VAD model
             whisper_model_name: MLX-Whisper model name
             utterance_callback: Callback to receive transcribed utterances
+            device_channels: Number of input channels the device supports
             language: Language code for transcription
         """
         self.source_id = source_id
@@ -63,6 +65,7 @@ class SourcePipeline:
             device_name=device_name,
             vad_model=vad_model,
             output_queue=self._audio_queue,
+            device_channels=device_channels,
         )
 
         # Create consumer

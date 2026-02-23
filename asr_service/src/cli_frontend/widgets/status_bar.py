@@ -14,7 +14,7 @@ class StatusBar(Static):
     """Status bar with recording indicator and timer."""
 
     def __init__(self, **kwargs):
-        super().__init__(**kwargs)
+        super().__init__("Ready", **kwargs)
         self.is_recording = False
         self.start_time = None
         self._timer_running = False
@@ -53,9 +53,3 @@ class StatusBar(Static):
             status: Status message to display
         """
         self.update(status)
-
-    def render(self):
-        """Render status bar content."""
-        if not self.renderable:
-            return "Ready"
-        return self.renderable
