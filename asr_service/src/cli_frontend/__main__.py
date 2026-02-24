@@ -5,7 +5,7 @@ Run with: python -m cli_frontend
 Or via Makefile: make run-cli
 """
 
-from .app import MeetingScribeApp
+from cli_frontend.app import MeetingScribeApp
 
 
 def main():

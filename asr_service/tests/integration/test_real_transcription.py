@@ -6,12 +6,7 @@ Tests actual transcription with the MP3 test file.
 
 import pytest
 import asyncio
-import json
 from pathlib import Path
-from fastapi.testclient import TestClient
-from fastapi.websockets import WebSocketDisconnect
-
-from asr_service.main import app
 from asr_service.services.model_manager import ModelManager
 
 
@@ -71,7 +66,7 @@ async def test_real_audio_transcription(test_audio_file, loaded_models):
     assert len(total_text) > 0, "Transcription is empty"
 
     # Print for verification
-    print(f"\n=== Transcription Results ===")
+    print("\n=== Transcription Results ===")
     print(f"Duration: {result['duration']:.2f}s")
     print(f"Language: {result['language']}")
     print(f"Segments: {len(segments)}")

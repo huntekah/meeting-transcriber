@@ -6,8 +6,8 @@ Shows utterances in chronological order with source labels, timestamps, and over
 
 from textual.widgets import RichLog
 from datetime import datetime
-from ..models import Utterance
-from ..logging import logger
+from cli_frontend.models import Utterance
+from cli_frontend.logging import logger
 
 
 class TranscriptView(RichLog):
@@ -57,7 +57,7 @@ class TranscriptView(RichLog):
         line = f"{source_label} {timestamp} - {utterance.text}{overlap_marker}{confidence_marker}"
         logger.info(f"Writing line to RichLog: {line}")
         self.write(line)
-        logger.info(f"Line written successfully")
+        logger.info("Line written successfully")
 
     def clear_transcript(self):
         """Clear all utterances from view."""

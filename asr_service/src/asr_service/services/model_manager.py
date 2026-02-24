@@ -26,6 +26,7 @@ class ModelManager:
     """
 
     _instance: Optional["ModelManager"] = None
+    _initialized: bool = False
     _lock = threading.Lock()
     _cold_pipeline_lock = threading.Lock()  # Serialize cold pipeline access (Numba/pyannote not thread-safe)
 

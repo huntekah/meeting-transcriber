@@ -49,7 +49,7 @@ async def test_two_sources():
         ]
     }
 
-    print(f"\n📤 Creating session with 2 sources...")
+    print("\n📤 Creating session with 2 sources...")
     print(f"   Payload: {payload}")
 
     async with httpx.AsyncClient(timeout=30.0) as client:
@@ -58,7 +58,7 @@ async def test_two_sources():
             response.raise_for_status()
             result = response.json()
 
-            print(f"\n✅ Session created!")
+            print("\n✅ Session created!")
             print(f"   Session ID: {result['session_id']}")
             print(f"   State: {result['state']}")
             print(f"   WebSocket: {result['websocket_url']}")
@@ -67,7 +67,7 @@ async def test_two_sources():
             await asyncio.sleep(2)
 
             # Get session details
-            print(f"\n📊 Fetching session details...")
+            print("\n📊 Fetching session details...")
             response = await client.get(f"{api_base}/api/v1/sessions/{result['session_id']}")
             session = response.json()
 
@@ -75,22 +75,22 @@ async def test_two_sources():
             print(f"   Utterances so far: {len(session['utterances'])}")
 
             # Check backend logs
-            print(f"\n💡 Now check backend logs for:")
-            print(f"   - 'Creating pipeline for source 0'")
-            print(f"   - 'Creating pipeline for source 1'")
-            print(f"   - 'VADAudioProducer 0 started'")
-            print(f"   - 'VADAudioProducer 1 started'")
+            print("\n💡 Now check backend logs for:")
+            print("   - 'Creating pipeline for source 0'")
+            print("   - 'Creating pipeline for source 1'")
+            print("   - 'VADAudioProducer 0 started'")
+            print("   - 'VADAudioProducer 1 started'")
 
-            print(f"\n🎤 Speak into your mic and play audio through BlackHole...")
-            print(f"   Watch CLI log: tail -f ~/.asr_cli_debug.log | grep 'source='")
-            print(f"   You should see BOTH source=0 and source=1")
+            print("\n🎤 Speak into your mic and play audio through BlackHole...")
+            print("   Watch CLI log: tail -f ~/.asr_cli_debug.log | grep 'source='")
+            print("   You should see BOTH source=0 and source=1")
 
             # Keep session alive
-            print(f"\n⏸  Session running. Press Ctrl+C to stop...")
+            print("\n⏸  Session running. Press Ctrl+C to stop...")
             try:
                 await asyncio.sleep(60)
             except KeyboardInterrupt:
-                print(f"\n🛑 Stopping session...")
+                print("\n🛑 Stopping session...")
 
             # Stop session
             response = await client.post(

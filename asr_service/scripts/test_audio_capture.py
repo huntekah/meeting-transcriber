@@ -108,7 +108,7 @@ def test_device(device_index: int, duration: int = 10):
             max_amplitude = np.max(np.abs(audio_mono))
 
             print(f"\n{'=' * 80}")
-            print(f"ANALYSIS")
+            print("ANALYSIS")
             print(f"{'=' * 80}")
             print(f"Total samples: {len(audio_mono):,}")
             print(f"Duration: {len(audio_mono) / sample_rate:.2f} seconds")
@@ -116,11 +116,11 @@ def test_device(device_index: int, duration: int = 10):
             print(f"Max amplitude: {max_amplitude:.6f}")
 
             if rms_overall < 0.0001:
-                print(f"\n❌ NO AUDIO DETECTED!")
-                print(f"   Possible causes:")
-                print(f"   - No audio playing through this device")
-                print(f"   - Wrong device selected")
-                print(f"   - Audio routing not configured (for BlackHole, need to route audio to it)")
+                print("\n❌ NO AUDIO DETECTED!")
+                print("   Possible causes:")
+                print("   - No audio playing through this device")
+                print("   - Wrong device selected")
+                print("   - Audio routing not configured (for BlackHole, need to route audio to it)")
             else:
                 print(f"\n✅ AUDIO DETECTED! (RMS: {rms_overall:.6f})")
 
@@ -172,6 +172,6 @@ if __name__ == "__main__":
         print(f"   Testing automatically (or specify device: python {sys.argv[0]} <device_index>)")
         test_device(blackhole_idx, duration=10)
     else:
-        print(f"❓ BlackHole 2ch not found.")
+        print("❓ BlackHole 2ch not found.")
         print(f"\nUsage: python {sys.argv[0]} <device_index> [duration_seconds]")
         print(f"Example: python {sys.argv[0]} 3 10")

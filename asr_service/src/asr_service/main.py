@@ -15,7 +15,7 @@ from .services.model_manager import ModelManager
 
 
 @asynccontextmanager
-async def lifespan(app: FastAPI):
+async def lifespan(app: FastAPI):  # pylint: disable=redefined-outer-name
     """
     Application lifespan manager.
 

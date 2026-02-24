@@ -4,14 +4,15 @@ Setup screen for device selection and configuration.
 First screen shown to user when starting the app.
 """
 
+from typing import List
 from textual.app import ComposeResult
 from textual.screen import Screen
 from textual.containers import Vertical, Horizontal
 from textual.widgets import Header, Footer, Button, Input, Label, Static
-from ..widgets.device_selector import DeviceSelector
-from ..api.client import ASRClient
-from ..config import CLISettings
-from ..models import SourceConfig
+from cli_frontend.widgets.device_selector import DeviceSelector
+from cli_frontend.api.client import ASRClient
+from cli_frontend.config import CLISettings
+from cli_frontend.models import SourceConfig, AudioDevice
 
 
 class SetupScreen(Screen):
@@ -26,7 +27,7 @@ class SetupScreen(Screen):
         super().__init__()
         self.client = client
         self.settings = settings
-        self.devices = []
+        self.devices: List[AudioDevice] = []
         self.loading = False
 
     def compose(self) -> ComposeResult:

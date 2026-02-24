@@ -1,92 +1,5 @@
 === RUFF CHECK ===
-F401 [*] `pytest` imported but unused
- --> tests/frontend/test_models.py:7:8
-  |
-5 | """
-6 |
-7 | import pytest
-  |        ^^^^^^
-8 | from pydantic import ValidationError
-9 | from cli_frontend.models import (
-  |
-help: Remove unused import: `pytest`
-
-F401 [*] `pydantic.ValidationError` imported but unused
-  --> tests/frontend/test_models.py:8:22
-   |
- 7 | import pytest
- 8 | from pydantic import ValidationError
-   |                      ^^^^^^^^^^^^^^^
- 9 | from cli_frontend.models import (
-10 |     AudioDevice,
-   |
-help: Remove unused import: `pydantic.ValidationError`
-
-F401 [*] `cli_frontend.models.SessionResponse` imported but unused
-  --> tests/frontend/test_models.py:13:5
-   |
-11 |     SourceConfig,
-12 |     Utterance,
-13 |     SessionResponse,
-   |     ^^^^^^^^^^^^^^^
-14 |     WSUtteranceMessage,
-15 |     WSStateChangeMessage,
-   |
-help: Remove unused import: `cli_frontend.models.SessionResponse`
-
-F401 [*] `pytest` imported but unused
- --> tests/frontend/test_widgets.py:7:8
-  |
-5 | """
-6 |
-7 | import pytest
-  |        ^^^^^^
-8 | from cli_frontend.widgets.status_bar import StatusBar
-9 | from cli_frontend.widgets.transcript_view import TranscriptView
-  |
-help: Remove unused import: `pytest`
-
-F401 [*] `pytest` imported but unused
- --> tests/integration/test_health_endpoint.py:1:8
-  |
-1 | import pytest
-  |        ^^^^^^
-  |
-help: Remove unused import: `pytest`
-
-F401 [*] `pytest` imported but unused
- --> tests/unit/test_config.py:1:8
-  |
-1 | import pytest
-  |        ^^^^^^
-2 | import os
-3 | from pathlib import Path
-  |
-help: Remove unused import: `pytest`
-
-F401 [*] `os` imported but unused
- --> tests/unit/test_config.py:2:8
-  |
-1 | import pytest
-2 | import os
-  |        ^^
-3 | from pathlib import Path
-4 | from asr_service.core.config import Settings
-  |
-help: Remove unused import: `os`
-
-F401 [*] `pytest` imported but unused
- --> tests/unit/test_file_ops.py:1:8
-  |
-1 | import pytest
-  |        ^^^^^^
-2 | from pathlib import Path
-3 | from asr_service.utils.file_ops import create_temp_file, validate_mime_type
-  |
-help: Remove unused import: `pytest`
-
-Found 8 errors.
-[*] 8 fixable with the `--fix` option.
+All checks passed!
 
 === BANDIT SECURITY ===
 [main]	INFO	profile include tests: None
@@ -94,22 +7,13 @@ Found 8 errors.
 [main]	INFO	cli include tests: None
 [main]	INFO	cli exclude tests: None
 [main]	INFO	running on Python 3.13.5
-Run started:2026-02-23 07:35:10.288567+00:00
+Run started:2026-02-24 15:28:34.362923+00:00
 
 Test results:
->> Issue: [B104:hardcoded_bind_all_interfaces] Possible binding to all interfaces.
-   Severity: Medium   Confidence: Medium
-   CWE: CWE-605 (https://cwe.mitre.org/data/definitions/605.html)
-   More Info: https://bandit.readthedocs.io/en/1.9.3/plugins/b104_hardcoded_bind_all_interfaces.html
-   Location: src/asr_service/core/config.py:46:16
-45	    # Server settings
-46	    HOST: str = "0.0.0.0"
-47	    PORT: int = 8000
-
---------------------------------------------------
+	No issues identified.
 
 Code scanned:
-	Total lines of code: 3192
+	Total lines of code: 3343
 	Total lines skipped (#nosec): 0
 	Total potential issues skipped due to specifically being disabled (e.g., #nosec BXXX): 0
 
@@ -117,78 +21,25 @@ Run metrics:
 	Total issues (by severity):
 		Undefined: 0
 		Low: 0
-		Medium: 1
+		Medium: 0
 		High: 0
 	Total issues (by confidence):
 		Undefined: 0
 		Low: 0
-		Medium: 1
+		Medium: 0
 		High: 0
 Files skipped (0):
 
 === MYPY TYPE CHECK ===
-src/cli_frontend/__main__.py:8: error: Cannot find implementation or library stub for module named ".app"  [import-not-found]
-src/asr_service/services/transcript_merger.py:10: error: Skipping analyzing "sortedcontainers": module is installed, but missing library stubs or py.typed marker  [import-untyped]
 src/asr_service/services/transcript_merger.py:29: note: By default the bodies of untyped functions are not checked, consider using --check-untyped-defs  [annotation-unchecked]
 src/asr_service/services/transcript_merger.py:35: note: By default the bodies of untyped functions are not checked, consider using --check-untyped-defs  [annotation-unchecked]
-src/asr_service/services/audio_devices.py:7: error: Skipping analyzing "sounddevice": module is installed, but missing library stubs or py.typed marker  [import-untyped]
-src/asr_service/services/audio_devices.py:7: note: See https://mypy.readthedocs.io/en/stable/running_mypy.html#missing-imports
-src/cli_frontend/api/websocket.py:19: error: Name "websockets.WebSocketClientProtocol" is not defined  [name-defined]
-src/cli_frontend/app.py:9: error: Cannot find implementation or library stub for module named ".screens.setup"  [import-not-found]
-src/cli_frontend/app.py:10: error: Cannot find implementation or library stub for module named ".screens.settings"  [import-not-found]
-src/cli_frontend/app.py:11: error: Cannot find implementation or library stub for module named ".api.client"  [import-not-found]
-src/cli_frontend/app.py:12: error: Cannot find implementation or library stub for module named ".config"  [import-not-found]
-src/cli_frontend/widgets/transcript_view.py:9: error: Cannot find implementation or library stub for module named ".models"  [import-not-found]
-src/cli_frontend/widgets/transcript_view.py:9: error: Relative import climbs too many namespaces  [misc]
-src/cli_frontend/widgets/device_selector.py:9: error: Cannot find implementation or library stub for module named ".models"  [import-not-found]
-src/cli_frontend/widgets/device_selector.py:9: error: Relative import climbs too many namespaces  [misc]
-src/cli_frontend/widgets/device_selector.py:17: error: Incompatible default for argument "devices" (default has type "None", argument has type "list[Any]")  [assignment]
-src/cli_frontend/widgets/device_selector.py:17: note: PEP 484 prohibits implicit Optional. Accordingly, mypy has changed its default to no_implicit_optional=True
-src/cli_frontend/widgets/device_selector.py:17: note: Use https://github.com/hauntsaninja/no_implicit_optional to automatically upgrade your codebase
-src/cli_frontend/screens/setup.py:11: error: Cannot find implementation or library stub for module named ".widgets.device_selector"  [import-not-found]
-src/cli_frontend/screens/setup.py:11: error: Relative import climbs too many namespaces  [misc]
-src/cli_frontend/screens/setup.py:12: error: Cannot find implementation or library stub for module named ".api.client"  [import-not-found]
-src/cli_frontend/screens/setup.py:12: error: Relative import climbs too many namespaces  [misc]
-src/cli_frontend/screens/setup.py:13: error: Cannot find implementation or library stub for module named ".config"  [import-not-found]
-src/cli_frontend/screens/setup.py:13: error: Relative import climbs too many namespaces  [misc]
-src/cli_frontend/screens/setup.py:14: error: Cannot find implementation or library stub for module named ".models"  [import-not-found]
-src/cli_frontend/screens/setup.py:14: error: Relative import climbs too many namespaces  [misc]
-src/cli_frontend/screens/setup.py:29: error: Need type annotation for "devices" (hint: "devices: list[<type>] = ...")  [var-annotated]
-src/cli_frontend/screens/setup.py:157: error: Cannot find implementation or library stub for module named ".recording"  [import-not-found]
-src/cli_frontend/screens/settings.py:11: error: Cannot find implementation or library stub for module named ".config"  [import-not-found]
-src/cli_frontend/screens/settings.py:11: error: Relative import climbs too many namespaces  [misc]
-src/cli_frontend/screens/recording.py:11: error: Cannot find implementation or library stub for module named ".widgets.transcript_view"  [import-not-found]
-src/cli_frontend/screens/recording.py:11: error: Relative import climbs too many namespaces  [misc]
-src/cli_frontend/screens/recording.py:12: error: Cannot find implementation or library stub for module named ".widgets.status_bar"  [import-not-found]
-src/cli_frontend/screens/recording.py:12: error: Relative import climbs too many namespaces  [misc]
-src/cli_frontend/screens/recording.py:13: error: Cannot find implementation or library stub for module named ".api.client"  [import-not-found]
-src/cli_frontend/screens/recording.py:13: error: Relative import climbs too many namespaces  [misc]
-src/cli_frontend/screens/recording.py:14: error: Cannot find implementation or library stub for module named ".api.websocket"  [import-not-found]
-src/cli_frontend/screens/recording.py:14: error: Relative import climbs too many namespaces  [misc]
-src/cli_frontend/screens/recording.py:15: error: Cannot find implementation or library stub for module named ".config"  [import-not-found]
-src/cli_frontend/screens/recording.py:15: error: Relative import climbs too many namespaces  [misc]
-src/cli_frontend/screens/recording.py:16: error: Cannot find implementation or library stub for module named ".models"  [import-not-found]
-src/cli_frontend/screens/recording.py:16: error: Relative import climbs too many namespaces  [misc]
-src/cli_frontend/api/client.py:9: error: Cannot find implementation or library stub for module named ".models"  [import-not-found]
-src/cli_frontend/api/client.py:9: error: Relative import climbs too many namespaces  [misc]
-src/cli_frontend/api/client.py:10: error: Cannot find implementation or library stub for module named ".config"  [import-not-found]
-src/cli_frontend/api/client.py:10: error: Relative import climbs too many namespaces  [misc]
-src/cli_frontend/api/client.py:52: error: Incompatible types in assignment (expression has type "str", target has type "list[Any]")  [assignment]
-src/asr_service/core/config.py:16: error: Extra keys ("env_file", "case_sensitive") for TypedDict "ConfigDict"  [typeddict-unknown-key]
-src/asr_service/core/config.py:16: error: Incompatible types in assignment (expression has type "ConfigDict", base class "BaseSettings" defined the type as "SettingsConfigDict")  [assignment]
-src/asr_service/services/vad_producer.py:13: error: Skipping analyzing "sounddevice": module is installed, but missing library stubs or py.typed marker  [import-untyped]
-src/asr_service/services/vad_producer.py:250: note: By default the bodies of untyped functions are not checked, consider using --check-untyped-defs  [annotation-unchecked]
-src/asr_service/services/model_manager.py:44: note: By default the bodies of untyped functions are not checked, consider using --check-untyped-defs  [annotation-unchecked]
+src/asr_service/services/vad_producer.py:314: note: By default the bodies of untyped functions are not checked, consider using --check-untyped-defs  [annotation-unchecked]
 src/asr_service/services/model_manager.py:46: note: By default the bodies of untyped functions are not checked, consider using --check-untyped-defs  [annotation-unchecked]
-src/asr_service/services/model_manager.py:129: error: Cannot find implementation or library stub for module named "cold_path_pipeline_v2"  [import-not-found]
-src/asr_service/services/live_transcriber.py:106: note: By default the bodies of untyped functions are not checked, consider using --check-untyped-defs  [annotation-unchecked]
-src/asr_service/services/live_transcriber.py:107: note: By default the bodies of untyped functions are not checked, consider using --check-untyped-defs  [annotation-unchecked]
-src/asr_service/services/live_transcriber.py:189: error: Skipping analyzing "mlx_whisper": module is installed, but missing library stubs or py.typed marker  [import-untyped]
-src/asr_service/services/cold_transcriber.py:12: error: Skipping analyzing "soundfile": module is installed, but missing library stubs or py.typed marker  [import-untyped]
-src/asr_service/services/cold_transcriber.py:53: error: Cannot find implementation or library stub for module named "cold_path_pipeline_v2"  [import-not-found]
-src/asr_service/services/audio_mixer.py:11: error: Skipping analyzing "soundfile": module is installed, but missing library stubs or py.typed marker  [import-untyped]
-src/asr_service/services/session_manager.py:41: note: By default the bodies of untyped functions are not checked, consider using --check-untyped-defs  [annotation-unchecked]
-Found 50 errors in 17 files (checked 43 source files)
+src/asr_service/services/model_manager.py:48: note: By default the bodies of untyped functions are not checked, consider using --check-untyped-defs  [annotation-unchecked]
+src/asr_service/services/live_transcriber.py:115: note: By default the bodies of untyped functions are not checked, consider using --check-untyped-defs  [annotation-unchecked]
+src/asr_service/services/live_transcriber.py:116: note: By default the bodies of untyped functions are not checked, consider using --check-untyped-defs  [annotation-unchecked]
+src/asr_service/services/session_manager.py:42: note: By default the bodies of untyped functions are not checked, consider using --check-untyped-defs  [annotation-unchecked]
+Success: no issues found in 48 source files
 
 === RADON COMPLEXITY ===
 src/asr_service/main.py
@@ -258,53 +109,55 @@ src/asr_service/services/source_pipeline.py
     M 144:4 SourcePipeline.get_stats - A
 src/asr_service/services/session_manager.py
     C 20:0 SessionManager - A
-    M 30:4 SessionManager.__new__ - A
-    M 36:4 SessionManager.__init__ - A
-    M 47:4 SessionManager.create_session - A
-    M 92:4 SessionManager.get_session - A
-    M 136:4 SessionManager.delete_session - A
-    M 113:4 SessionManager.get_session_or_none - A
-    M 126:4 SessionManager.list_sessions - A
-    M 150:4 SessionManager.get_all_sessions - A
-    M 160:4 SessionManager.get_stats - A
+    M 31:4 SessionManager.__new__ - A
+    M 37:4 SessionManager.__init__ - A
+    M 48:4 SessionManager.create_session - A
+    M 93:4 SessionManager.get_session - A
+    M 137:4 SessionManager.delete_session - A
+    M 114:4 SessionManager.get_session_or_none - A
+    M 127:4 SessionManager.list_sessions - A
+    M 151:4 SessionManager.get_all_sessions - A
+    M 161:4 SessionManager.get_stats - A
 src/asr_service/services/session.py
-    M 366:4 ActiveSession.get_document - B
-    M 280:4 ActiveSession._broadcast_message - A
-    M 389:4 ActiveSession.get_stats - A
+    M 388:4 ActiveSession.get_document - B
+    M 297:4 ActiveSession._broadcast_message - A
+    M 411:4 ActiveSession.get_stats - A
     C 37:0 ActiveSession - A
-    M 102:4 ActiveSession.initialize - A
-    M 164:4 ActiveSession.stop_recording - A
-    M 147:4 ActiveSession.start_recording - A
-    M 263:4 ActiveSession._broadcast_utterance_sync - A
-    M 300:4 ActiveSession.add_websocket_client - A
-    M 326:4 ActiveSession.remove_websocket_client - A
-    M 342:4 ActiveSession._set_state - A
+    M 103:4 ActiveSession.initialize - A
+    M 169:4 ActiveSession.stop_recording - A
+    M 268:4 ActiveSession._broadcast_utterance_sync - A
+    M 359:4 ActiveSession._set_state - A
+    M 152:4 ActiveSession.start_recording - A
+    M 317:4 ActiveSession.add_websocket_client - A
+    M 343:4 ActiveSession.remove_websocket_client - A
     M 50:4 ActiveSession.__init__ - A
-    M 221:4 ActiveSession._run_cold_path - A
-    M 255:4 ActiveSession._on_utterance - A
+    M 226:4 ActiveSession._run_cold_path - A
+    M 260:4 ActiveSession._on_utterance - A
 src/asr_service/services/audio_devices.py
     F 13:0 list_audio_devices - A
     F 71:0 get_default_input_device - A
     F 54:0 get_device_by_index - A
 src/asr_service/services/vad_producer.py
-    M 31:4 VADAudioProducer.__init__ - A
-    C 21:0 VADAudioProducer - A
-    M 88:4 VADAudioProducer.start - A
-    M 109:4 VADAudioProducer.stop - A
-    M 223:4 VADAudioProducer._finalize_segment - A
-    M 135:4 VADAudioProducer._capture_loop - A
-    M 268:4 VADAudioProducer.get_full_audio - A
-    M 279:4 VADAudioProducer.get_stats - A
+    M 223:4 VADAudioProducer._vad_processing_loop - B
+    M 124:4 VADAudioProducer.stop - B
+    C 25:0 VADAudioProducer - A
+    M 35:4 VADAudioProducer.__init__ - A
+    M 96:4 VADAudioProducer.start - A
+    M 287:4 VADAudioProducer._finalize_segment - A
+    M 154:4 VADAudioProducer._capture_loop - A
+    M 332:4 VADAudioProducer.get_full_audio - A
+    M 343:4 VADAudioProducer.get_stats - A
 src/asr_service/services/model_manager.py
-    M 110:4 ModelManager.get_cold_pipeline - A
+    M 143:4 ModelManager.get_cold_pipeline - A
     C 20:0 ModelManager - A
-    M 31:4 ModelManager.__new__ - A
-    M 55:4 ModelManager.load_models - A
-    M 39:4 ModelManager.__init__ - A
-    M 79:4 ModelManager._load_models_sync - A
-    M 156:4 ModelManager.unload_models - A
-    M 147:4 ModelManager.is_loaded - A
-    M 178:4 ModelManager.get_stats - A
+    M 33:4 ModelManager.__new__ - A
+    M 57:4 ModelManager.load_models - A
+    M 41:4 ModelManager.__init__ - A
+    M 81:4 ModelManager._load_models_sync - A
+    M 114:4 ModelManager._preload_mlx_whisper - A
+    M 189:4 ModelManager.unload_models - A
+    M 180:4 ModelManager.is_loaded - A
+    M 211:4 ModelManager.get_stats - A
 src/asr_service/services/transcript_merger.py
     M 84:4 ChronologicalMerger._find_overlaps - B
     M 175:4 ChronologicalMerger.get_stats - A
@@ -322,20 +175,22 @@ src/asr_service/services/audio_mixer.py
     M 87:4 AudioMixer.save_multi_channel - B
     M 143:4 AudioMixer.get_duration - A
 src/asr_service/services/live_transcriber.py
-    M 95:4 LiveTranscriber._inference_loop - B
-    C 22:0 LiveTranscriber - A
-    M 178:4 LiveTranscriber._transcribe - A
-    M 65:4 LiveTranscriber.start - A
-    M 78:4 LiveTranscriber.stop - A
-    M 32:4 LiveTranscriber.__init__ - A
-    M 226:4 LiveTranscriber.get_stats - A
+    M 99:4 LiveTranscriber._inference_loop - C
+    C 26:0 LiveTranscriber - A
+    M 197:4 LiveTranscriber._transcribe - A
+    M 69:4 LiveTranscriber.start - A
+    M 82:4 LiveTranscriber.stop - A
+    M 36:4 LiveTranscriber.__init__ - A
+    M 247:4 LiveTranscriber.get_stats - A
 src/asr_service/services/cold_transcriber.py
-    M 176:4 ColdPathPostProcessor._find_silence_chunks - C
+    M 181:4 ColdPathPostProcessor._find_silence_chunks - C
     M 79:4 ColdPathPostProcessor.process_long_audio - B
     C 20:0 ColdPathPostProcessor - B
     M 41:4 ColdPathPostProcessor._ensure_pipeline - A
     M 65:4 ColdPathPostProcessor._ensure_vad_model - A
     M 31:4 ColdPathPostProcessor.__init__ - A
+src/cli_frontend/logging.py
+    F 13:0 setup_logging - A
 src/cli_frontend/config.py
     C 10:0 CLISettings - A
 src/cli_frontend/models.py
@@ -357,24 +212,24 @@ src/cli_frontend/app.py
 src/cli_frontend/__main__.py
     F 11:0 main - A
 src/cli_frontend/screens/recording.py
-    M 72:4 RecordingScreen.on_ws_message - C
-    C 19:0 RecordingScreen - A
-    M 28:4 RecordingScreen.__init__ - A
-    M 132:4 RecordingScreen.stop_recording - A
-    M 127:4 RecordingScreen.on_button_pressed - A
-    M 150:4 RecordingScreen.return_to_setup - A
-    M 159:4 RecordingScreen.on_unmount - A
-    M 49:4 RecordingScreen.compose - A
-    M 63:4 RecordingScreen.on_mount - A
-    M 123:4 RecordingScreen.action_stop_recording - A
+    M 78:4 RecordingScreen.on_ws_message - C
+    C 20:0 RecordingScreen - A
+    M 29:4 RecordingScreen.__init__ - A
+    M 154:4 RecordingScreen.stop_recording - A
+    M 149:4 RecordingScreen.on_button_pressed - A
+    M 172:4 RecordingScreen.return_to_setup - A
+    M 181:4 RecordingScreen.on_unmount - A
+    M 50:4 RecordingScreen.compose - A
+    M 64:4 RecordingScreen.on_mount - A
+    M 145:4 RecordingScreen.action_stop_recording - A
 src/cli_frontend/screens/setup.py
-    M 102:4 SetupScreen.start_recording - C
-    C 17:0 SetupScreen - A
-    M 95:4 SetupScreen.on_button_pressed - A
-    M 72:4 SetupScreen.load_devices - A
-    M 25:4 SetupScreen.__init__ - A
-    M 32:4 SetupScreen.compose - A
-    M 68:4 SetupScreen.on_mount - A
+    M 103:4 SetupScreen.start_recording - C
+    C 18:0 SetupScreen - A
+    M 96:4 SetupScreen.on_button_pressed - A
+    M 73:4 SetupScreen.load_devices - A
+    M 26:4 SetupScreen.__init__ - A
+    M 33:4 SetupScreen.compose - A
+    M 69:4 SetupScreen.on_mount - A
 src/cli_frontend/screens/settings.py
     M 77:4 SettingsScreen.on_button_pressed - A
     C 14:0 SettingsScreen - A
@@ -382,21 +237,21 @@ src/cli_frontend/screens/settings.py
     M 25:4 SettingsScreen.compose - A
     M 84:4 SettingsScreen.save_settings - A
 src/cli_frontend/api/client.py
-    M 33:4 ASRClient.create_session - A
+    M 34:4 ASRClient.create_session - A
     C 13:0 ASRClient - A
-    M 20:4 ASRClient.get_devices - A
+    M 21:4 ASRClient.get_devices - A
     M 16:4 ASRClient.__init__ - A
-    M 58:4 ASRClient.stop_session - A
-    M 74:4 ASRClient.get_session - A
-    M 90:4 ASRClient.list_sessions - A
-    M 103:4 ASRClient.close - A
+    M 59:4 ASRClient.stop_session - A
+    M 75:4 ASRClient.get_session - A
+    M 91:4 ASRClient.list_sessions - A
+    M 104:4 ASRClient.close - A
 src/cli_frontend/api/websocket.py
-    M 23:4 WSClient.connect - B
-    C 14:0 WSClient - A
-    M 73:4 WSClient.disconnect - A
-    M 79:4 WSClient.send - A
-    M 17:4 WSClient.__init__ - A
-    M 60:4 WSClient.start - A
+    M 24:4 WSClient.connect - B
+    C 15:0 WSClient - A
+    M 82:4 WSClient.disconnect - A
+    M 88:4 WSClient.send - A
+    M 18:4 WSClient.__init__ - A
+    M 69:4 WSClient.start - A
 src/cli_frontend/widgets/status_bar.py
     M 35:4 StatusBar.update_timer - A
     C 13:0 StatusBar - A
@@ -405,18 +260,18 @@ src/cli_frontend/widgets/status_bar.py
     M 29:4 StatusBar.stop_recording - A
     M 48:4 StatusBar.set_status - A
 src/cli_frontend/widgets/transcript_view.py
-    C 12:0 TranscriptView - A
-    M 26:4 TranscriptView.add_utterance - A
-    M 15:4 TranscriptView.__init__ - A
-    M 56:4 TranscriptView.clear_transcript - A
+    C 13:0 TranscriptView - A
+    M 27:4 TranscriptView.add_utterance - A
+    M 16:4 TranscriptView.__init__ - A
+    M 62:4 TranscriptView.clear_transcript - A
 src/cli_frontend/widgets/device_selector.py
     C 12:0 DeviceSelector - A
     M 63:4 DeviceSelector.set_devices - A
     M 15:4 DeviceSelector.__init__ - A
     M 45:4 DeviceSelector._create_options - A
 
-189 blocks (classes, functions, methods) analyzed.
-Average complexity: A (2.3492063492063493)
+192 blocks (classes, functions, methods) analyzed.
+Average complexity: A (2.4270833333333335)
 
 === VULTURE DEAD CODE ===
 src/asr_service/api/v1/endpoints/devices.py:16: unused function 'get_audio_devices' (60% confidence)
@@ -473,10 +328,10 @@ src/asr_service/schemas/websocket.py:121: unused variable 'WSMessage' (60% confi
 src/asr_service/services/audio_devices.py:54: unused function 'get_device_by_index' (60% confidence)
 src/asr_service/services/audio_devices.py:71: unused function 'get_default_input_device' (60% confidence)
 src/asr_service/services/audio_mixer.py:142: unused method 'get_duration' (60% confidence)
-src/asr_service/services/session_manager.py:150: unused method 'get_all_sessions' (60% confidence)
+src/asr_service/services/session_manager.py:151: unused method 'get_all_sessions' (60% confidence)
 src/asr_service/services/transcript_merger.py:135: unused method 'get_utterances_since' (60% confidence)
-src/asr_service/services/vad_producer.py:142: unused variable 'frames' (100% confidence)
-src/asr_service/services/vad_producer.py:142: unused variable 'time_info' (100% confidence)
+src/asr_service/services/vad_producer.py:161: unused variable 'frames' (100% confidence)
+src/asr_service/services/vad_producer.py:161: unused variable 'time_info' (100% confidence)
 src/asr_service/utils/file_ops.py:8: unused function 'create_temp_file' (60% confidence)
 src/asr_service/utils/file_ops.py:32: unused function 'validate_mime_type' (60% confidence)
 src/cli_frontend/app.py:19: unused variable 'CSS_PATH' (60% confidence)
@@ -498,24 +353,23 @@ src/cli_frontend/models.py:67: unused variable 'type' (60% confidence)
 src/cli_frontend/models.py:74: unused variable 'type' (60% confidence)
 src/cli_frontend/models.py:76: unused variable 'code' (60% confidence)
 src/cli_frontend/models.py:80: unused variable 'WSMessage' (60% confidence)
-src/cli_frontend/screens/recording.py:22: unused variable 'BINDINGS' (60% confidence)
-src/cli_frontend/screens/recording.py:49: unused method 'compose' (60% confidence)
-src/cli_frontend/screens/recording.py:63: unused method 'on_mount' (60% confidence)
-src/cli_frontend/screens/recording.py:123: unused method 'action_stop_recording' (60% confidence)
-src/cli_frontend/screens/recording.py:127: unused method 'on_button_pressed' (60% confidence)
-src/cli_frontend/screens/recording.py:159: unused method 'on_unmount' (60% confidence)
+src/cli_frontend/screens/recording.py:23: unused variable 'BINDINGS' (60% confidence)
+src/cli_frontend/screens/recording.py:50: unused method 'compose' (60% confidence)
+src/cli_frontend/screens/recording.py:64: unused method 'on_mount' (60% confidence)
+src/cli_frontend/screens/recording.py:145: unused method 'action_stop_recording' (60% confidence)
+src/cli_frontend/screens/recording.py:149: unused method 'on_button_pressed' (60% confidence)
+src/cli_frontend/screens/recording.py:181: unused method 'on_unmount' (60% confidence)
 src/cli_frontend/screens/settings.py:17: unused variable 'BINDINGS' (60% confidence)
 src/cli_frontend/screens/settings.py:25: unused method 'compose' (60% confidence)
 src/cli_frontend/screens/settings.py:77: unused method 'on_button_pressed' (60% confidence)
-src/cli_frontend/screens/setup.py:20: unused variable 'BINDINGS' (60% confidence)
-src/cli_frontend/screens/setup.py:32: unused method 'compose' (60% confidence)
-src/cli_frontend/screens/setup.py:68: unused method 'on_mount' (60% confidence)
-src/cli_frontend/screens/setup.py:95: unused method 'on_button_pressed' (60% confidence)
-src/cli_frontend/widgets/transcript_view.py:56: unused method 'clear_transcript' (60% confidence)
+src/cli_frontend/screens/setup.py:21: unused variable 'BINDINGS' (60% confidence)
+src/cli_frontend/screens/setup.py:33: unused method 'compose' (60% confidence)
+src/cli_frontend/screens/setup.py:69: unused method 'on_mount' (60% confidence)
+src/cli_frontend/screens/setup.py:96: unused method 'on_button_pressed' (60% confidence)
+src/cli_frontend/widgets/transcript_view.py:62: unused method 'clear_transcript' (60% confidence)
 
 === PYLINT ===
 ************* Module asr_service.main
-src/asr_service/main.py:18:19: W0621: Redefining name 'app' from outer scope (line 51) (redefined-outer-name)
 src/asr_service/main.py:27:4: W1203: Use lazy % formatting in logging functions (logging-fstring-interpolation)
 src/asr_service/main.py:28:4: W1203: Use lazy % formatting in logging functions (logging-fstring-interpolation)
 src/asr_service/main.py:29:4: W1203: Use lazy % formatting in logging functions (logging-fstring-interpolation)
@@ -586,29 +440,39 @@ src/asr_service/services/source_pipeline.py:115:8: W1203: Use lazy % formatting 
 src/asr_service/services/source_pipeline.py:125:12: W1203: Use lazy % formatting in logging functions (logging-fstring-interpolation)
 src/asr_service/services/source_pipeline.py:133:8: W1203: Use lazy % formatting in logging functions (logging-fstring-interpolation)
 ************* Module asr_service.services.session_manager
-src/asr_service/services/session_manager.py:82:8: W1203: Use lazy % formatting in logging functions (logging-fstring-interpolation)
-src/asr_service/services/session_manager.py:146:16: W1203: Use lazy % formatting in logging functions (logging-fstring-interpolation)
-src/asr_service/services/session_manager.py:37:11: E0203: Access to member '_initialized' before its definition line 44 (access-member-before-definition)
+src/asr_service/services/session_manager.py:83:8: W1203: Use lazy % formatting in logging functions (logging-fstring-interpolation)
+src/asr_service/services/session_manager.py:147:16: W1203: Use lazy % formatting in logging functions (logging-fstring-interpolation)
 ************* Module asr_service.services.session
-src/asr_service/services/session.py:37:0: R0902: Too many instance attributes (17/7) (too-many-instance-attributes)
-src/asr_service/services/session.py:97:8: W1203: Use lazy % formatting in logging functions (logging-fstring-interpolation)
-src/asr_service/services/session.py:113:12: W1203: Use lazy % formatting in logging functions (logging-fstring-interpolation)
-src/asr_service/services/session.py:138:12: W1203: Use lazy % formatting in logging functions (logging-fstring-interpolation)
-src/asr_service/services/session.py:141:12: W1203: Use lazy % formatting in logging functions (logging-fstring-interpolation)
-src/asr_service/services/session.py:153:8: W1203: Use lazy % formatting in logging functions (logging-fstring-interpolation)
-src/asr_service/services/session.py:162:8: W1203: Use lazy % formatting in logging functions (logging-fstring-interpolation)
-src/asr_service/services/session.py:176:8: W1203: Use lazy % formatting in logging functions (logging-fstring-interpolation)
-src/asr_service/services/session.py:181:12: W1203: Use lazy % formatting in logging functions (logging-fstring-interpolation)
-src/asr_service/services/session.py:200:12: W1203: Use lazy % formatting in logging functions (logging-fstring-interpolation)
-src/asr_service/services/session.py:214:12: W1203: Use lazy % formatting in logging functions (logging-fstring-interpolation)
-src/asr_service/services/session.py:217:12: W1203: Use lazy % formatting in logging functions (logging-fstring-interpolation)
-src/asr_service/services/session.py:223:8: W1203: Use lazy % formatting in logging functions (logging-fstring-interpolation)
-src/asr_service/services/session.py:243:8: W1203: Use lazy % formatting in logging functions (logging-fstring-interpolation)
-src/asr_service/services/session.py:292:23: W0718: Catching too general exception Exception (broad-exception-caught)
-src/asr_service/services/session.py:293:20: W1203: Use lazy % formatting in logging functions (logging-fstring-interpolation)
-src/asr_service/services/session.py:310:8: W1203: Use lazy % formatting in logging functions (logging-fstring-interpolation)
-src/asr_service/services/session.py:337:8: W1203: Use lazy % formatting in logging functions (logging-fstring-interpolation)
-src/asr_service/services/session.py:353:8: W1203: Use lazy % formatting in logging functions (logging-fstring-interpolation)
+src/asr_service/services/session.py:88:0: C0301: Line too long (116/100) (line-too-long)
+src/asr_service/services/session.py:374:0: C0301: Line too long (102/100) (line-too-long)
+src/asr_service/services/session.py:37:0: R0902: Too many instance attributes (18/7) (too-many-instance-attributes)
+src/asr_service/services/session.py:98:8: W1203: Use lazy % formatting in logging functions (logging-fstring-interpolation)
+src/asr_service/services/session.py:114:12: W1203: Use lazy % formatting in logging functions (logging-fstring-interpolation)
+src/asr_service/services/session.py:118:12: W1203: Use lazy % formatting in logging functions (logging-fstring-interpolation)
+src/asr_service/services/session.py:143:12: W1203: Use lazy % formatting in logging functions (logging-fstring-interpolation)
+src/asr_service/services/session.py:146:12: W1203: Use lazy % formatting in logging functions (logging-fstring-interpolation)
+src/asr_service/services/session.py:158:8: W1203: Use lazy % formatting in logging functions (logging-fstring-interpolation)
+src/asr_service/services/session.py:167:8: W1203: Use lazy % formatting in logging functions (logging-fstring-interpolation)
+src/asr_service/services/session.py:181:8: W1203: Use lazy % formatting in logging functions (logging-fstring-interpolation)
+src/asr_service/services/session.py:186:12: W1203: Use lazy % formatting in logging functions (logging-fstring-interpolation)
+src/asr_service/services/session.py:205:12: W1203: Use lazy % formatting in logging functions (logging-fstring-interpolation)
+src/asr_service/services/session.py:219:12: W1203: Use lazy % formatting in logging functions (logging-fstring-interpolation)
+src/asr_service/services/session.py:222:12: W1203: Use lazy % formatting in logging functions (logging-fstring-interpolation)
+src/asr_service/services/session.py:228:8: W1203: Use lazy % formatting in logging functions (logging-fstring-interpolation)
+src/asr_service/services/session.py:248:8: W1203: Use lazy % formatting in logging functions (logging-fstring-interpolation)
+src/asr_service/services/session.py:274:8: W1203: Use lazy % formatting in logging functions (logging-fstring-interpolation)
+src/asr_service/services/session.py:281:12: W1203: Use lazy % formatting in logging functions (logging-fstring-interpolation)
+src/asr_service/services/session.py:294:15: W0718: Catching too general exception Exception (broad-exception-caught)
+src/asr_service/services/session.py:293:12: W1203: Use lazy % formatting in logging functions (logging-fstring-interpolation)
+src/asr_service/services/session.py:295:12: W1203: Use lazy % formatting in logging functions (logging-fstring-interpolation)
+src/asr_service/services/session.py:309:23: W0718: Catching too general exception Exception (broad-exception-caught)
+src/asr_service/services/session.py:310:20: W1203: Use lazy % formatting in logging functions (logging-fstring-interpolation)
+src/asr_service/services/session.py:327:8: W1203: Use lazy % formatting in logging functions (logging-fstring-interpolation)
+src/asr_service/services/session.py:354:8: W1203: Use lazy % formatting in logging functions (logging-fstring-interpolation)
+src/asr_service/services/session.py:370:8: W1203: Use lazy % formatting in logging functions (logging-fstring-interpolation)
+src/asr_service/services/session.py:375:12: W1203: Use lazy % formatting in logging functions (logging-fstring-interpolation)
+src/asr_service/services/session.py:385:15: W0718: Catching too general exception Exception (broad-exception-caught)
+src/asr_service/services/session.py:386:12: W1203: Use lazy % formatting in logging functions (logging-fstring-interpolation)
 src/asr_service/services/session.py:15:0: C0411: standard import "concurrent.futures" should be placed before third party import "fastapi.WebSocket" (wrong-import-order)
 ************* Module asr_service.services.audio_devices
 src/asr_service/services/audio_devices.py:49:11: W0718: Catching too general exception Exception (broad-exception-caught)
@@ -616,36 +480,50 @@ src/asr_service/services/audio_devices.py:46:8: W1203: Use lazy % formatting in 
 src/asr_service/services/audio_devices.py:50:8: W1203: Use lazy % formatting in logging functions (logging-fstring-interpolation)
 src/asr_service/services/audio_devices.py:8:0: C0411: standard import "typing.List" should be placed before third party import "sounddevice" (wrong-import-order)
 ************* Module asr_service.services.vad_producer
-src/asr_service/services/vad_producer.py:129:0: C0301: Line too long (104/100) (line-too-long)
-src/asr_service/services/vad_producer.py:21:0: R0902: Too many instance attributes (18/7) (too-many-instance-attributes)
-src/asr_service/services/vad_producer.py:31:4: R0913: Too many arguments (11/5) (too-many-arguments)
-src/asr_service/services/vad_producer.py:31:4: R0917: Too many positional arguments (11/5) (too-many-positional-arguments)
-src/asr_service/services/vad_producer.py:96:12: W1203: Use lazy % formatting in logging functions (logging-fstring-interpolation)
-src/asr_service/services/vad_producer.py:105:8: W1203: Use lazy % formatting in logging functions (logging-fstring-interpolation)
-src/asr_service/services/vad_producer.py:118:8: W1203: Use lazy % formatting in logging functions (logging-fstring-interpolation)
-src/asr_service/services/vad_producer.py:128:16: W1203: Use lazy % formatting in logging functions (logging-fstring-interpolation)
+src/asr_service/services/vad_producer.py:148:0: C0301: Line too long (104/100) (line-too-long)
+src/asr_service/services/vad_producer.py:257:0: C0301: Line too long (110/100) (line-too-long)
+src/asr_service/services/vad_producer.py:267:0: C0301: Line too long (117/100) (line-too-long)
+src/asr_service/services/vad_producer.py:25:0: R0902: Too many instance attributes (20/7) (too-many-instance-attributes)
+src/asr_service/services/vad_producer.py:35:4: R0913: Too many arguments (11/5) (too-many-arguments)
+src/asr_service/services/vad_producer.py:35:4: R0917: Too many positional arguments (11/5) (too-many-positional-arguments)
+src/asr_service/services/vad_producer.py:104:12: W1203: Use lazy % formatting in logging functions (logging-fstring-interpolation)
+src/asr_service/services/vad_producer.py:120:8: W1203: Use lazy % formatting in logging functions (logging-fstring-interpolation)
 src/asr_service/services/vad_producer.py:133:8: W1203: Use lazy % formatting in logging functions (logging-fstring-interpolation)
-src/asr_service/services/vad_producer.py:153:16: W1203: Use lazy % formatting in logging functions (logging-fstring-interpolation)
-src/asr_service/services/vad_producer.py:191:19: W0718: Catching too general exception Exception (broad-exception-caught)
-src/asr_service/services/vad_producer.py:192:16: W1203: Use lazy % formatting in logging functions (logging-fstring-interpolation)
-src/asr_service/services/vad_producer.py:142:47: W0613: Unused argument 'frames' (unused-argument)
-src/asr_service/services/vad_producer.py:142:60: W0613: Unused argument 'time_info' (unused-argument)
+src/asr_service/services/vad_producer.py:147:16: W1203: Use lazy % formatting in logging functions (logging-fstring-interpolation)
+src/asr_service/services/vad_producer.py:152:8: W1203: Use lazy % formatting in logging functions (logging-fstring-interpolation)
+src/asr_service/services/vad_producer.py:175:16: W1203: Use lazy % formatting in logging functions (logging-fstring-interpolation)
+src/asr_service/services/vad_producer.py:194:16: W1203: Use lazy % formatting in logging functions (logging-fstring-interpolation)
+src/asr_service/services/vad_producer.py:161:47: W0613: Unused argument 'frames' (unused-argument)
+src/asr_service/services/vad_producer.py:161:60: W0613: Unused argument 'time_info' (unused-argument)
 src/asr_service/services/vad_producer.py:207:16: W1203: Use lazy % formatting in logging functions (logging-fstring-interpolation)
 src/asr_service/services/vad_producer.py:217:12: W1203: Use lazy % formatting in logging functions (logging-fstring-interpolation)
 src/asr_service/services/vad_producer.py:221:12: W0707: Consider explicitly re-raising using 'raise AudioCaptureError(self.device_index, str(e)) from e' (raise-missing-from)
-src/asr_service/services/vad_producer.py:240:12: W1203: Use lazy % formatting in logging functions (logging-fstring-interpolation)
-src/asr_service/services/vad_producer.py:259:12: W1203: Use lazy % formatting in logging functions (logging-fstring-interpolation)
-src/asr_service/services/vad_producer.py:264:12: W1203: Use lazy % formatting in logging functions (logging-fstring-interpolation)
+src/asr_service/services/vad_producer.py:230:8: W1203: Use lazy % formatting in logging functions (logging-fstring-interpolation)
+src/asr_service/services/vad_producer.py:279:19: W0718: Catching too general exception Exception (broad-exception-caught)
+src/asr_service/services/vad_producer.py:274:23: W0718: Catching too general exception Exception (broad-exception-caught)
+src/asr_service/services/vad_producer.py:257:28: W1203: Use lazy % formatting in logging functions (logging-fstring-interpolation)
+src/asr_service/services/vad_producer.py:266:32: W1203: Use lazy % formatting in logging functions (logging-fstring-interpolation)
+src/asr_service/services/vad_producer.py:275:20: W1203: Use lazy % formatting in logging functions (logging-fstring-interpolation)
+src/asr_service/services/vad_producer.py:280:16: W1203: Use lazy % formatting in logging functions (logging-fstring-interpolation)
+src/asr_service/services/vad_producer.py:285:8: W1203: Use lazy % formatting in logging functions (logging-fstring-interpolation)
+src/asr_service/services/vad_producer.py:232:8: R1702: Too many nested blocks (6/5) (too-many-nested-blocks)
+src/asr_service/services/vad_producer.py:304:12: W1203: Use lazy % formatting in logging functions (logging-fstring-interpolation)
+src/asr_service/services/vad_producer.py:323:12: W1203: Use lazy % formatting in logging functions (logging-fstring-interpolation)
+src/asr_service/services/vad_producer.py:328:12: W1203: Use lazy % formatting in logging functions (logging-fstring-interpolation)
 ************* Module asr_service.services.model_manager
-src/asr_service/services/model_manager.py:101:12: W1203: Use lazy % formatting in logging functions (logging-fstring-interpolation)
-src/asr_service/services/model_manager.py:107:12: W1203: Use lazy % formatting in logging functions (logging-fstring-interpolation)
-src/asr_service/services/model_manager.py:108:12: W0707: Consider explicitly re-raising using 'raise ModelLoadingError('VAD/Whisper', str(e)) from e' (raise-missing-from)
-src/asr_service/services/model_manager.py:129:12: E0401: Unable to import 'cold_path_pipeline_v2' (import-error)
-src/asr_service/services/model_manager.py:129:12: C0415: Import outside toplevel (cold_path_pipeline_v2.ColdPathPipeline_MLX) (import-outside-toplevel)
-src/asr_service/services/model_manager.py:144:12: W1203: Use lazy % formatting in logging functions (logging-fstring-interpolation)
-src/asr_service/services/model_manager.py:145:12: W0707: Consider explicitly re-raising using 'raise ModelLoadingError('ColdPathPipeline_MLX', str(e)) from e' (raise-missing-from)
-src/asr_service/services/model_manager.py:169:8: C0415: Import outside toplevel (gc) (import-outside-toplevel)
-src/asr_service/services/model_manager.py:40:11: E0203: Access to member '_initialized' before its definition line 52 (access-member-before-definition)
+src/asr_service/services/model_manager.py:31:0: C0301: Line too long (109/100) (line-too-long)
+src/asr_service/services/model_manager.py:103:12: W1203: Use lazy % formatting in logging functions (logging-fstring-interpolation)
+src/asr_service/services/model_manager.py:111:12: W1203: Use lazy % formatting in logging functions (logging-fstring-interpolation)
+src/asr_service/services/model_manager.py:112:12: W0707: Consider explicitly re-raising using 'raise ModelLoadingError('VAD/Whisper', str(e)) from e' (raise-missing-from)
+src/asr_service/services/model_manager.py:139:15: W0718: Catching too general exception Exception (broad-exception-caught)
+src/asr_service/services/model_manager.py:121:12: C0415: Import outside toplevel (mlx_whisper) (import-outside-toplevel)
+src/asr_service/services/model_manager.py:122:12: C0415: Import outside toplevel (numpy) (import-outside-toplevel)
+src/asr_service/services/model_manager.py:140:12: W1203: Use lazy % formatting in logging functions (logging-fstring-interpolation)
+src/asr_service/services/model_manager.py:162:12: E0401: Unable to import 'cold_path_pipeline_v2' (import-error)
+src/asr_service/services/model_manager.py:162:12: C0415: Import outside toplevel (cold_path_pipeline_v2.ColdPathPipeline_MLX) (import-outside-toplevel)
+src/asr_service/services/model_manager.py:177:12: W1203: Use lazy % formatting in logging functions (logging-fstring-interpolation)
+src/asr_service/services/model_manager.py:178:12: W0707: Consider explicitly re-raising using 'raise ModelLoadingError('ColdPathPipeline_MLX', str(e)) from e' (raise-missing-from)
+src/asr_service/services/model_manager.py:202:8: C0415: Import outside toplevel (gc) (import-outside-toplevel)
 ************* Module asr_service.services.transcript_merger
 src/asr_service/services/transcript_merger.py:120:0: C0301: Line too long (105/100) (line-too-long)
 src/asr_service/services/transcript_merger.py:47:8: W1203: Use lazy % formatting in logging functions (logging-fstring-interpolation)
@@ -661,78 +539,108 @@ src/asr_service/services/audio_mixer.py:79:8: W1203: Use lazy % formatting in lo
 src/asr_service/services/audio_mixer.py:114:8: W1203: Use lazy % formatting in logging functions (logging-fstring-interpolation)
 src/asr_service/services/audio_mixer.py:135:8: W1203: Use lazy % formatting in logging functions (logging-fstring-interpolation)
 ************* Module asr_service.services.live_transcriber
-src/asr_service/services/live_transcriber.py:150:0: C0301: Line too long (104/100) (line-too-long)
-src/asr_service/services/live_transcriber.py:22:0: R0902: Too many instance attributes (10/7) (too-many-instance-attributes)
-src/asr_service/services/live_transcriber.py:32:4: R0913: Too many arguments (6/5) (too-many-arguments)
-src/asr_service/services/live_transcriber.py:32:4: R0917: Too many positional arguments (6/5) (too-many-positional-arguments)
-src/asr_service/services/live_transcriber.py:68:12: W1203: Use lazy % formatting in logging functions (logging-fstring-interpolation)
-src/asr_service/services/live_transcriber.py:76:8: W1203: Use lazy % formatting in logging functions (logging-fstring-interpolation)
-src/asr_service/services/live_transcriber.py:83:8: W1203: Use lazy % formatting in logging functions (logging-fstring-interpolation)
-src/asr_service/services/live_transcriber.py:90:8: W1203: Use lazy % formatting in logging functions (logging-fstring-interpolation)
-src/asr_service/services/live_transcriber.py:157:19: W0718: Catching too general exception Exception (broad-exception-caught)
-src/asr_service/services/live_transcriber.py:121:20: W1203: Use lazy % formatting in logging functions (logging-fstring-interpolation)
-src/asr_service/services/live_transcriber.py:148:16: W1203: Use lazy % formatting in logging functions (logging-fstring-interpolation)
-src/asr_service/services/live_transcriber.py:159:16: W1203: Use lazy % formatting in logging functions (logging-fstring-interpolation)
-src/asr_service/services/live_transcriber.py:175:23: W0718: Catching too general exception Exception (broad-exception-caught)
-src/asr_service/services/live_transcriber.py:176:20: W1203: Use lazy % formatting in logging functions (logging-fstring-interpolation)
-src/asr_service/services/live_transcriber.py:189:12: C0415: Import outside toplevel (mlx_whisper) (import-outside-toplevel)
-src/asr_service/services/live_transcriber.py:193:43: W1514: Using open without explicitly specifying an encoding (unspecified-encoding)
-src/asr_service/services/live_transcriber.py:194:43: W1514: Using open without explicitly specifying an encoding (unspecified-encoding)
-src/asr_service/services/live_transcriber.py:220:12: W1203: Use lazy % formatting in logging functions (logging-fstring-interpolation)
-src/asr_service/services/live_transcriber.py:224:12: W0707: Consider explicitly re-raising using 'raise TranscriptionError(str(e), self.source_id) from e' (raise-missing-from)
+src/asr_service/services/live_transcriber.py:168:0: C0301: Line too long (104/100) (line-too-long)
+src/asr_service/services/live_transcriber.py:26:0: R0902: Too many instance attributes (10/7) (too-many-instance-attributes)
+src/asr_service/services/live_transcriber.py:36:4: R0913: Too many arguments (6/5) (too-many-arguments)
+src/asr_service/services/live_transcriber.py:36:4: R0917: Too many positional arguments (6/5) (too-many-positional-arguments)
+src/asr_service/services/live_transcriber.py:72:12: W1203: Use lazy % formatting in logging functions (logging-fstring-interpolation)
+src/asr_service/services/live_transcriber.py:80:8: W1203: Use lazy % formatting in logging functions (logging-fstring-interpolation)
+src/asr_service/services/live_transcriber.py:87:8: W1203: Use lazy % formatting in logging functions (logging-fstring-interpolation)
+src/asr_service/services/live_transcriber.py:94:8: W1203: Use lazy % formatting in logging functions (logging-fstring-interpolation)
+src/asr_service/services/live_transcriber.py:175:19: W0718: Catching too general exception Exception (broad-exception-caught)
+src/asr_service/services/live_transcriber.py:112:20: W1203: Use lazy % formatting in logging functions (logging-fstring-interpolation)
+src/asr_service/services/live_transcriber.py:130:20: W1203: Use lazy % formatting in logging functions (logging-fstring-interpolation)
+src/asr_service/services/live_transcriber.py:137:20: W1203: Use lazy % formatting in logging functions (logging-fstring-interpolation)
+src/asr_service/services/live_transcriber.py:158:23: W0718: Catching too general exception Exception (broad-exception-caught)
+src/asr_service/services/live_transcriber.py:160:20: W1203: Use lazy % formatting in logging functions (logging-fstring-interpolation)
+src/asr_service/services/live_transcriber.py:166:16: W1203: Use lazy % formatting in logging functions (logging-fstring-interpolation)
+src/asr_service/services/live_transcriber.py:177:16: W1203: Use lazy % formatting in logging functions (logging-fstring-interpolation)
+src/asr_service/services/live_transcriber.py:194:27: W0718: Catching too general exception Exception (broad-exception-caught)
+src/asr_service/services/live_transcriber.py:195:24: W1203: Use lazy % formatting in logging functions (logging-fstring-interpolation)
+src/asr_service/services/live_transcriber.py:208:12: C0415: Import outside toplevel (mlx_whisper) (import-outside-toplevel)
+src/asr_service/services/live_transcriber.py:214:47: W1514: Using open without explicitly specifying an encoding (unspecified-encoding)
+src/asr_service/services/live_transcriber.py:215:47: W1514: Using open without explicitly specifying an encoding (unspecified-encoding)
+src/asr_service/services/live_transcriber.py:241:12: W1203: Use lazy % formatting in logging functions (logging-fstring-interpolation)
+src/asr_service/services/live_transcriber.py:245:12: W0707: Consider explicitly re-raising using 'raise TranscriptionError(str(e), self.source_id) from e' (raise-missing-from)
 ************* Module asr_service.services.cold_transcriber
 src/asr_service/services/cold_transcriber.py:53:8: E0401: Unable to import 'cold_path_pipeline_v2' (import-error)
 src/asr_service/services/cold_transcriber.py:53:8: C0415: Import outside toplevel (cold_path_pipeline_v2.ColdPathPipeline_MLX) (import-outside-toplevel)
-src/asr_service/services/cold_transcriber.py:79:4: R0914: Too many local variables (18/15) (too-many-locals)
+src/asr_service/services/cold_transcriber.py:79:4: R0914: Too many local variables (19/15) (too-many-locals)
 src/asr_service/services/cold_transcriber.py:108:8: W1203: Use lazy % formatting in logging functions (logging-fstring-interpolation)
 src/asr_service/services/cold_transcriber.py:118:8: W1203: Use lazy % formatting in logging functions (logging-fstring-interpolation)
 src/asr_service/services/cold_transcriber.py:122:12: W1203: Use lazy % formatting in logging functions (logging-fstring-interpolation)
-src/asr_service/services/cold_transcriber.py:126:8: W1203: Use lazy % formatting in logging functions (logging-fstring-interpolation)
+src/asr_service/services/cold_transcriber.py:124:12: C0415: Import outside toplevel (model_manager.ModelManager) (import-outside-toplevel)
+src/asr_service/services/cold_transcriber.py:125:17: W0212: Access to a protected member _cold_pipeline_lock of a client class (protected-access)
 src/asr_service/services/cold_transcriber.py:129:8: W1203: Use lazy % formatting in logging functions (logging-fstring-interpolation)
-src/asr_service/services/cold_transcriber.py:134:12: W1203: Use lazy % formatting in logging functions (logging-fstring-interpolation)
-src/asr_service/services/cold_transcriber.py:158:16: W1203: Use lazy % formatting in logging functions (logging-fstring-interpolation)
+src/asr_service/services/cold_transcriber.py:132:8: W1203: Use lazy % formatting in logging functions (logging-fstring-interpolation)
+src/asr_service/services/cold_transcriber.py:137:12: W1203: Use lazy % formatting in logging functions (logging-fstring-interpolation)
+src/asr_service/services/cold_transcriber.py:152:16: C0415: Import outside toplevel (model_manager.ModelManager) (import-outside-toplevel)
+src/asr_service/services/cold_transcriber.py:153:21: W0212: Access to a protected member _cold_pipeline_lock of a client class (protected-access)
 src/asr_service/services/cold_transcriber.py:163:16: W1203: Use lazy % formatting in logging functions (logging-fstring-interpolation)
-src/asr_service/services/cold_transcriber.py:164:16: W0707: Consider explicitly re-raising using 'raise TranscriptionError(f'Chunk {chunk_idx + 1} failed: {e}') from e' (raise-missing-from)
-src/asr_service/services/cold_transcriber.py:170:8: W1203: Use lazy % formatting in logging functions (logging-fstring-interpolation)
-src/asr_service/services/cold_transcriber.py:176:4: R0914: Too many local variables (23/15) (too-many-locals)
-src/asr_service/services/cold_transcriber.py:227:8: W1203: Use lazy % formatting in logging functions (logging-fstring-interpolation)
-src/asr_service/services/cold_transcriber.py:260:8: W1203: Use lazy % formatting in logging functions (logging-fstring-interpolation)
+src/asr_service/services/cold_transcriber.py:168:16: W1203: Use lazy % formatting in logging functions (logging-fstring-interpolation)
+src/asr_service/services/cold_transcriber.py:169:16: W0707: Consider explicitly re-raising using 'raise TranscriptionError(f'Chunk {chunk_idx + 1} failed: {e}') from e' (raise-missing-from)
+src/asr_service/services/cold_transcriber.py:175:8: W1203: Use lazy % formatting in logging functions (logging-fstring-interpolation)
+src/asr_service/services/cold_transcriber.py:181:4: R0914: Too many local variables (23/15) (too-many-locals)
+src/asr_service/services/cold_transcriber.py:232:8: W1203: Use lazy % formatting in logging functions (logging-fstring-interpolation)
+src/asr_service/services/cold_transcriber.py:265:8: W1203: Use lazy % formatting in logging functions (logging-fstring-interpolation)
 src/asr_service/services/cold_transcriber.py:20:0: R0903: Too few public methods (1/2) (too-few-public-methods)
+************* Module cli_frontend.logging
+src/cli_frontend/logging.py:23:4: W0621: Redefining name 'logger' from outer scope (line 29) (redefined-outer-name)
+src/cli_frontend/logging.py:25:4: W1203: Use lazy % formatting in logging functions (logging-fstring-interpolation)
 ************* Module cli_frontend.config
 src/cli_frontend/config.py:19:4: C0115: Missing class docstring (missing-class-docstring)
 src/cli_frontend/config.py:19:4: R0903: Too few public methods (0/2) (too-few-public-methods)
 ************* Module cli_frontend.models
 src/cli_frontend/models.py:8:0: C0411: standard import "typing.List" should be placed before third party import "pydantic.BaseModel" (wrong-import-order)
-************* Module cli_frontend.app
-src/cli_frontend/app.py:9:0: E0401: Unable to import 'screens.setup' (import-error)
-src/cli_frontend/app.py:10:0: E0401: Unable to import 'screens.settings' (import-error)
-src/cli_frontend/app.py:11:0: E0401: Unable to import 'api.client' (import-error)
 ************* Module cli_frontend.screens.recording
-src/cli_frontend/screens/recording.py:87:19: W0718: Catching too general exception Exception (broad-exception-caught)
-src/cli_frontend/screens/recording.py:109:19: W0718: Catching too general exception Exception (broad-exception-caught)
-src/cli_frontend/screens/recording.py:145:15: W0718: Catching too general exception Exception (broad-exception-caught)
+src/cli_frontend/screens/recording.py:93:0: C0301: Line too long (109/100) (line-too-long)
+src/cli_frontend/screens/recording.py:66:8: W1203: Use lazy % formatting in logging functions (logging-fstring-interpolation)
+src/cli_frontend/screens/recording.py:67:8: W1203: Use lazy % formatting in logging functions (logging-fstring-interpolation)
+src/cli_frontend/screens/recording.py:86:8: W1203: Use lazy % formatting in logging functions (logging-fstring-interpolation)
+src/cli_frontend/screens/recording.py:101:19: W0718: Catching too general exception Exception (broad-exception-caught)
+src/cli_frontend/screens/recording.py:91:16: W1203: Use lazy % formatting in logging functions (logging-fstring-interpolation)
+src/cli_frontend/screens/recording.py:93:16: W1203: Use lazy % formatting in logging functions (logging-fstring-interpolation)
+src/cli_frontend/screens/recording.py:96:16: W1203: Use lazy % formatting in logging functions (logging-fstring-interpolation)
+src/cli_frontend/screens/recording.py:102:16: W1203: Use lazy % formatting in logging functions (logging-fstring-interpolation)
+src/cli_frontend/screens/recording.py:126:19: W0718: Catching too general exception Exception (broad-exception-caught)
+src/cli_frontend/screens/recording.py:107:16: W1203: Use lazy % formatting in logging functions (logging-fstring-interpolation)
+src/cli_frontend/screens/recording.py:124:16: W1203: Use lazy % formatting in logging functions (logging-fstring-interpolation)
+src/cli_frontend/screens/recording.py:127:16: W1203: Use lazy % formatting in logging functions (logging-fstring-interpolation)
+src/cli_frontend/screens/recording.py:138:12: W1203: Use lazy % formatting in logging functions (logging-fstring-interpolation)
+src/cli_frontend/screens/recording.py:143:12: W1203: Use lazy % formatting in logging functions (logging-fstring-interpolation)
+src/cli_frontend/screens/recording.py:167:15: W0718: Catching too general exception Exception (broad-exception-caught)
 ************* Module cli_frontend.screens.setup
-src/cli_frontend/screens/setup.py:90:15: W0718: Catching too general exception Exception (broad-exception-caught)
-src/cli_frontend/screens/setup.py:169:15: W0718: Catching too general exception Exception (broad-exception-caught)
-src/cli_frontend/screens/setup.py:157:12: C0415: Import outside toplevel (recording.RecordingScreen) (import-outside-toplevel)
+src/cli_frontend/screens/setup.py:91:15: W0718: Catching too general exception Exception (broad-exception-caught)
+src/cli_frontend/screens/setup.py:170:15: W0718: Catching too general exception Exception (broad-exception-caught)
+src/cli_frontend/screens/setup.py:158:12: C0415: Import outside toplevel (recording.RecordingScreen) (import-outside-toplevel)
 ************* Module cli_frontend.api.client
 src/cli_frontend/api/client.py:8:0: C0411: standard import "typing.List" should be placed before third party import "httpx" (wrong-import-order)
 ************* Module cli_frontend.api.websocket
-src/cli_frontend/api/websocket.py:19:33: E1101: Module 'websockets' has no 'WebSocketClientProtocol' member (no-member)
-src/cli_frontend/api/websocket.py:54:15: W0718: Catching too general exception Exception (broad-exception-caught)
-src/cli_frontend/api/websocket.py:47:27: W0718: Catching too general exception Exception (broad-exception-caught)
+src/cli_frontend/api/websocket.py:32:8: W1203: Use lazy % formatting in logging functions (logging-fstring-interpolation)
+src/cli_frontend/api/websocket.py:62:15: W0718: Catching too general exception Exception (broad-exception-caught)
+src/cli_frontend/api/websocket.py:55:27: W0718: Catching too general exception Exception (broad-exception-caught)
+src/cli_frontend/api/websocket.py:43:24: W1203: Use lazy % formatting in logging functions (logging-fstring-interpolation)
+src/cli_frontend/api/websocket.py:45:24: W1203: Use lazy % formatting in logging functions (logging-fstring-interpolation)
+src/cli_frontend/api/websocket.py:53:24: W1203: Use lazy % formatting in logging functions (logging-fstring-interpolation)
+src/cli_frontend/api/websocket.py:57:24: W1203: Use lazy % formatting in logging functions (logging-fstring-interpolation)
+src/cli_frontend/api/websocket.py:63:12: W1203: Use lazy % formatting in logging functions (logging-fstring-interpolation)
+src/cli_frontend/api/websocket.py:67:12: W1203: Use lazy % formatting in logging functions (logging-fstring-interpolation)
 src/cli_frontend/api/websocket.py:9:0: C0411: standard import "json" should be placed before third party import "websockets" (wrong-import-order)
 src/cli_frontend/api/websocket.py:10:0: C0411: standard import "typing.Callable" should be placed before third party import "websockets" (wrong-import-order)
 ************* Module cli_frontend.widgets.status_bar
 src/cli_frontend/widgets/status_bar.py:9:0: C0411: standard import "datetime.datetime" should be placed before third party imports "textual.widgets.Static", "textual.work" (wrong-import-order)
 src/cli_frontend/widgets/status_bar.py:10:0: C0411: standard import "asyncio" should be placed before third party imports "textual.widgets.Static", "textual.work" (wrong-import-order)
 ************* Module cli_frontend.widgets.transcript_view
+src/cli_frontend/widgets/transcript_view.py:34:0: C0301: Line too long (122/100) (line-too-long)
+src/cli_frontend/widgets/transcript_view.py:34:8: W1203: Use lazy % formatting in logging functions (logging-fstring-interpolation)
+src/cli_frontend/widgets/transcript_view.py:37:8: W1203: Use lazy % formatting in logging functions (logging-fstring-interpolation)
+src/cli_frontend/widgets/transcript_view.py:58:8: W1203: Use lazy % formatting in logging functions (logging-fstring-interpolation)
 src/cli_frontend/widgets/transcript_view.py:8:0: C0411: standard import "datetime.datetime" should be placed before third party import "textual.widgets.RichLog" (wrong-import-order)
 ************* Module cli_frontend.widgets.device_selector
 src/cli_frontend/widgets/device_selector.py:8:0: C0411: standard import "typing.List" should be placed before third party import "textual.widgets.Select" (wrong-import-order)
 src/cli_frontend/widgets/device_selector.py:1:0: R0801: Similar lines in 2 files
 ==asr_service.services.cold_transcriber:[55:66]
-==asr_service.services.model_manager:[132:140]
+==asr_service.services.model_manager:[165:173]
             whisper_model=settings.MLX_WHISPER_MODEL,
             diarization_model=settings.DIARIZATION_MODEL,
             hf_token=settings.HF_TOKEN,
@@ -745,19 +653,21 @@ src/cli_frontend/widgets/device_selector.py:1:0: R0801: Similar lines in 2 files
     def _ensure_vad_model(self):
         """Lazy-load VAD model for chunking.""" (duplicate-code)
 src/cli_frontend/widgets/device_selector.py:1:0: R0801: Similar lines in 2 files
-==asr_service.services.model_manager:[33:43]
-==asr_service.services.session_manager:[30:40]
-        if cls._instance is None:
-            cls._instance = super().__new__(cls)
-            cls._instance._initialized = False
+==asr_service.services.model_manager:[35:45]
+==asr_service.services.session_manager:[31:41]
+                if cls._instance is None:
+                    cls._instance = super().__new__(cls)
+                    cls._instance._initialized = False
         return cls._instance
 
     def __init__(self):
         if self._initialized:
             return
 
-        # Session registry (duplicate-code)
+        # Model instances (duplicate-code)
 
 ------------------------------------------------------------------
-Your code has been rated at 8.57/10 (previous run: 8.00/10, +0.57)
+Your code has been rated at 8.49/10 (previous run: 8.49/10, +0.00)
 
+
+=== END ===

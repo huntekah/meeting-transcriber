@@ -5,8 +5,8 @@ Wraps Textual's Select widget with AudioDevice-specific formatting.
 """
 
 from textual.widgets import Select
-from typing import List, Tuple
-from ..models import AudioDevice
+from typing import List, Optional, Tuple
+from cli_frontend.models import AudioDevice
 
 
 class DeviceSelector(Select):
@@ -14,7 +14,7 @@ class DeviceSelector(Select):
 
     def __init__(
         self,
-        devices: List[AudioDevice] = None,
+        devices: Optional[List[AudioDevice]] = None,
         label: str = "Select device",
         allow_blank: bool = True,
         **kwargs,

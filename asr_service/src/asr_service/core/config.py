@@ -43,7 +43,7 @@ class Settings(BaseSettings):
     COLD_PATH_PARALLEL: bool = True  # Run diarization + transcription in parallel
 
     # Server settings
-    HOST: str = "0.0.0.0"
+    HOST: str = "127.0.0.1"  # Bind to localhost by default (set to 0.0.0.0 to expose publicly)
     PORT: int = 8000
 
     # Output

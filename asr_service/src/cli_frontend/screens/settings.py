@@ -8,7 +8,7 @@ from textual.screen import ModalScreen
 from textual.app import ComposeResult
 from textual.containers import Container, Vertical, Horizontal
 from textual.widgets import Label, Switch, Button, Input, Static
-from ..config import CLISettings
+from cli_frontend.config import CLISettings
 
 
 class SettingsScreen(ModalScreen):

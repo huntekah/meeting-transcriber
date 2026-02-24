@@ -119,7 +119,7 @@ async def main():
     # Create session
     payload = {"sources": [mic, blackhole]}
 
-    print(f"\n📤 Creating session...")
+    print("\n📤 Creating session...")
 
     async with httpx.AsyncClient(timeout=30.0) as client:
         try:
@@ -131,22 +131,22 @@ async def main():
             ws_url = result['websocket_url']
 
             print(f"✅ Session created: {session_id}")
-            print(f"\n🎙️  NOW SPEAK into your microphone!")
-            print(f"🔊 AND PLAY a YouTube video with talking (not music)")
-            print(f"\nYou should see:")
-            print(f"  - \033[96m[Source 0]\033[0m utterances (cyan) from your mic")
-            print(f"  - \033[92m[Source 1]\033[0m utterances (green) from BlackHole")
+            print("\n🎙️  NOW SPEAK into your microphone!")
+            print("🔊 AND PLAY a YouTube video with talking (not music)")
+            print("\nYou should see:")
+            print("  - \033[96m[Source 0]\033[0m utterances (cyan) from your mic")
+            print("  - \033[92m[Source 1]\033[0m utterances (green) from BlackHole")
 
             # Listen to WebSocket
             await listen_websocket(ws_url, session_id)
 
             # Stop session
-            print(f"\n🛑 Stopping session...")
+            print("\n🛑 Stopping session...")
             response = await client.post(
                 f"{api_base}/api/v1/sessions/{session_id}/stop",
                 timeout=60.0
             )
-            print(f"✅ Session stopped")
+            print("✅ Session stopped")
 
         except httpx.HTTPStatusError as e:
             print(f"❌ HTTP Error: {e.response.status_code}")

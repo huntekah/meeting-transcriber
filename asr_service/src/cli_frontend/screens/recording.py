@@ -8,13 +8,13 @@ from textual.app import ComposeResult
 from textual.screen import Screen
 from textual.containers import Vertical, Horizontal
 from textual.widgets import Header, Footer, Button
-from ..widgets.transcript_view import TranscriptView
-from ..widgets.status_bar import StatusBar
-from ..api.client import ASRClient
-from ..api.websocket import WSClient
-from ..config import CLISettings
-from ..models import WSUtteranceMessage, WSStateChangeMessage
-from ..logging import logger
+from cli_frontend.widgets.transcript_view import TranscriptView
+from cli_frontend.widgets.status_bar import StatusBar
+from cli_frontend.api.client import ASRClient
+from cli_frontend.api.websocket import WSClient
+from cli_frontend.config import CLISettings
+from cli_frontend.models import WSUtteranceMessage, WSStateChangeMessage
+from cli_frontend.logging import logger
 
 
 class RecordingScreen(Screen):
@@ -96,7 +96,7 @@ class RecordingScreen(Screen):
                 logger.debug(f"Got TranscriptView widget: {transcript}")
 
                 transcript.add_utterance(msg.data)
-                logger.info(f"Utterance added to transcript view")
+                logger.info("Utterance added to transcript view")
 
             except Exception as e:
                 logger.error(f"Error processing utterance: {e}", exc_info=True)

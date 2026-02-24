@@ -6,10 +6,10 @@ Entry point for the CLI testing tool.
 
 from textual.app import App
 from textual.binding import Binding
-from .screens.setup import SetupScreen
-from .screens.settings import SettingsScreen
-from .api.client import ASRClient
-from .config import settings
+from cli_frontend.screens.setup import SetupScreen
+from cli_frontend.screens.settings import SettingsScreen
+from cli_frontend.api.client import ASRClient
+from cli_frontend.config import settings
 
 
 class MeetingScribeApp(App):

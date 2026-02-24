@@ -2,7 +2,7 @@ import logging
 import sys
 
 
-def setup_logging(level: str = "INFO") -> logging.Logger:
+def setup_logging(level: str = "INFO") -> "logging.Logger":
     """
     Configure structured logging for the application.
 

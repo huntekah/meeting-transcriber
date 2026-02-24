@@ -89,7 +89,7 @@ async def test_websocket_broadcast():
                     print("   WebSocket connection closed")
                     break
 
-            print(f"\n4. Test complete!")
+            print("\n4. Test complete!")
             print(f"   Total messages received: {len(received_messages)}")
             print(f"   Utterances received: {utterance_count}")
 

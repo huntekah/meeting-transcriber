@@ -9,7 +9,7 @@ import websockets
 import json
 from typing import Callable, Optional
 from websockets.exceptions import ConnectionClosed
-from ..logging import logger
+from cli_frontend.logging import logger
 
 
 class WSClient:
@@ -17,7 +17,7 @@ class WSClient:
 
     def __init__(self, ws_url: str):
         self.ws_url = ws_url
-        self.websocket: Optional[websockets.WebSocketClientProtocol] = None
+        self.websocket: Optional[websockets.WebSocketClientProtocol] = None  # pylint: disable=no-member
         self._running = False
         self._task: Optional[asyncio.Task] = None
 
@@ -35,7 +35,7 @@ class WSClient:
             async with websockets.connect(self.ws_url) as websocket:
                 self.websocket = websocket
                 self._running = True
-                logger.info(f"WebSocket connected successfully")
+                logger.info("WebSocket connected successfully")
                 while self._running:
                     try:
                         message = await websocket.recv()
@@ -44,7 +44,7 @@ class WSClient:
                         data = json.loads(message)
                         logger.debug(f"Parsed message type: {data.get('type')}")
                         await on_message(data)
-                        logger.debug(f"Message handler completed")
+                        logger.debug("Message handler completed")
                     except ConnectionClosed:
                         logger.info("WebSocket connection closed")
                         break

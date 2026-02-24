@@ -6,8 +6,8 @@ Provides async methods for interacting with session management endpoints.
 
 import httpx
 from typing import List, Optional, Dict, Any
-from ..models import AudioDevice, SourceConfig
-from ..config import CLISettings
+from cli_frontend.models import AudioDevice, SourceConfig
+from cli_frontend.config import CLISettings
 
 
 class ASRClient:
@@ -46,7 +46,7 @@ class ASRClient:
         Returns:
             Session response with session_id, state, websocket_url
         """
-        payload = {
+        payload: Dict[str, Any] = {
             "sources": [s.model_dump() for s in sources],
         }
         if output_dir:

@@ -7,7 +7,6 @@ Captures system audio using macOS ScreenCaptureKit (requires macOS 13+).
 
 import subprocess
 import numpy as np
-import time
 from pathlib import Path
 
 
@@ -42,7 +41,7 @@ def test_screencapture_audio(duration: int = 10, sample_rate: int = 16000):
     input("Press Enter when ready to capture...")
 
     # Run Swift script and capture stdout
-    print(f"\n📹 Starting ScreenCaptureKit capture...")
+    print("\n📹 Starting ScreenCaptureKit capture...")
 
     try:
         process = subprocess.Popen(
@@ -81,18 +80,18 @@ def test_screencapture_audio(duration: int = 10, sample_rate: int = 16000):
         rms = np.sqrt(np.mean(audio_array ** 2))
         max_amplitude = np.max(np.abs(audio_array))
 
-        print(f"\n📊 Audio Analysis:")
+        print("\n📊 Audio Analysis:")
         print(f"   RMS level: {rms:.6f}")
         print(f"   Max amplitude: {max_amplitude:.6f}")
 
         if rms < 0.0001:
-            print(f"\n❌ NO AUDIO DETECTED!")
-            print(f"   Possible causes:")
-            print(f"   - No audio playing")
-            print(f"   - Permission not granted")
-            print(f"   - System audio muted")
+            print("\n❌ NO AUDIO DETECTED!")
+            print("   Possible causes:")
+            print("   - No audio playing")
+            print("   - Permission not granted")
+            print("   - System audio muted")
         else:
-            print(f"\n✅ AUDIO DETECTED!")
+            print("\n✅ AUDIO DETECTED!")
 
             # Save to file
             output_file = script_dir / "screencapture_test.wav"

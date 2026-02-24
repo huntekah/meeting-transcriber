@@ -57,7 +57,7 @@ async def debug_session(session_id: str):
                 print(f"\nPipelines running: {stats.get('pipelines_running', 'N/A')}")
 
                 if 'pipelines' in stats:
-                    print(f"\nPer-source stats:")
+                    print("\nPer-source stats:")
                     for pipeline_stat in stats['pipelines']:
                         source_id = pipeline_stat.get('source_id', '?')
                         print(f"\n  [Source {source_id}]")
@@ -67,14 +67,14 @@ async def debug_session(session_id: str):
 
                         if 'producer_stats' in pipeline_stat:
                             prod = pipeline_stat['producer_stats']
-                            print(f"    Producer:")
+                            print("    Producer:")
                             print(f"      Audio chunks captured: {prod.get('total_audio_chunks', 0)}")
                             print(f"      Currently speaking: {prod.get('is_speaking', False)}")
                             print(f"      Buffer size: {prod.get('buffer_size', 0)}")
 
                         if 'transcriber_stats' in pipeline_stat:
                             trans = pipeline_stat['transcriber_stats']
-                            print(f"    Transcriber:")
+                            print("    Transcriber:")
                             print(f"      Queue size: {trans.get('queue_size', 0)}")
                             print(f"      Segments processed: {trans.get('segments_processed', 0)}")
 
