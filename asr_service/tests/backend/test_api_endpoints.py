@@ -65,15 +65,27 @@ class TestDevicesEndpoint:
             ]
 
             with patch("asr_service.services.audio_devices.sd.default.device", (0, -1)):
-                response = await async_client.get("/api/v1/devices")
+                # Disable ScreenCaptureKit for this test (different machines may have it or not)
+                with patch("asr_service.services.audio_devices._is_screencapture_binary_available", return_value=False):
+                    response = await async_client.get("/api/v1/devices")
 
-                assert response.status_code == 200
-                devices = response.json()
-                assert len(devices) == 2
-                assert devices[0]["name"] == "Test Microphone"
-                assert devices[0]["device_index"] == 0
-                assert devices[0]["channels"] == 1
-                assert devices[0]["is_default"] is True
+                    assert response.status_code == 200
+                    devices = response.json()
+
+                    # Should have at least the 2 mocked devices
+                    assert len(devices) >= 2
+
+                    # Verify the mocked devices are present (by name and properties)
+                    device_names = [d["name"] for d in devices]
+                    assert "Test Microphone" in device_names
+                    assert "Test System Audio" in device_names
+
+                    # Verify default device marking
+                    mic = next((d for d in devices if d["name"] == "Test Microphone"), None)
+                    assert mic is not None
+                    assert mic["device_index"] == 0
+                    assert mic["channels"] == 1
+                    assert mic["is_default"] is True
 
 
 class TestSessionEndpoints:

@@ -1,29 +1,43 @@
-.PHONY: help install run dev run-cli test test-coverage test-backend test-frontend clean lint format
+.PHONY: help install build-swift run dev run-cli test test-coverage test-backend test-frontend clean lint format
 
 help:
 	@echo "Available commands:"
-	@echo "  make install       - Install dependencies using uv"
-	@echo "  make run           - Start the ASR service"
-	@echo "  make dev           - Start with auto-reload (development mode)"
-	@echo "  make run-cli       - Start the CLI frontend"
+	@echo "  make install       - Install dependencies using uv and compile Swift binaries"
+	@echo "  make build-swift   - Compile ScreenCaptureKit Swift binary (macOS only)"
+	@echo "  make run           - Start the ASR service (compiles Swift binary if needed)"
+	@echo "  make dev           - Start with auto-reload (development mode, compiles Swift binary if needed)"
+	@echo "  make run-cli       - Start the CLI frontend (compiles Swift binary if needed)"
 	@echo "  make test          - Run all tests"
 	@echo "  make test-coverage - Run tests with coverage report"
 	@echo "  make test-backend  - Run backend tests only"
 	@echo "  make test-frontend - Run frontend tests only"
 	@echo "  make lint          - Run code linters"
 	@echo "  make format        - Format code"
-	@echo "  make clean         - Clean temporary files"
+	@echo "  make clean         - Clean temporary files and compiled binaries"
 
-install:
+build-swift:
+	@if [ "$$(uname)" = "Darwin" ]; then \
+		if ! [ -f scripts/screencapture_audio ]; then \
+			echo "🔨 Compiling ScreenCaptureKit audio capture binary..."; \
+			swiftc scripts/screencapture_audio.swift -o scripts/screencapture_audio; \
+			echo "✅ ScreenCaptureKit binary compiled: scripts/screencapture_audio"; \
+		else \
+			echo "✅ ScreenCaptureKit binary already compiled"; \
+		fi \
+	else \
+		echo "⏭️  ScreenCaptureKit only available on macOS, skipping..."; \
+	fi
+
+install: build-swift
 	uv sync
 
-run:
+run: build-swift
 	cd src && uv run uvicorn asr_service.main:app --host 0.0.0.0 --port 8000
 
-dev:
+dev: build-swift
 	cd src && uv run uvicorn asr_service.main:app --host 0.0.0.0 --port 8000 --reload
 
-run-cli:
+run-cli: build-swift
 	cd src && uv run --group cli python -m cli_frontend
 
 test:
@@ -53,3 +67,5 @@ clean:
 	find . -type d -name "*.egg-info" -exec rm -rf {} + 2>/dev/null || true
 	find . -type d -name ".pytest_cache" -exec rm -rf {} + 2>/dev/null || true
 	find . -type d -name ".ruff_cache" -exec rm -rf {} + 2>/dev/null || true
+	rm -f scripts/screencapture_audio
+	@echo "✅ Cleaned compiled binaries"

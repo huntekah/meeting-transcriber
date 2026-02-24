@@ -25,6 +25,12 @@ class ScreenAudioCapturer: NSObject, SCStreamDelegate, SCStreamOutput {
             onScreenWindowsOnly: true
         )
 
+        // Check if we have any displays
+        guard !availableContent.displays.isEmpty else {
+            throw NSError(domain: "ScreenAudioCapturer", code: 1,
+                         userInfo: [NSLocalizedDescriptionKey: "No displays found"])
+        }
+
         // Create filter to capture system audio
         let filter = SCContentFilter(
             display: availableContent.displays[0],
@@ -38,16 +44,24 @@ class ScreenAudioCapturer: NSObject, SCStreamDelegate, SCStreamOutput {
         streamConfig.sampleRate = sampleRate
         streamConfig.channelCount = 1  // Mono
 
-        // Disable video capture
-        streamConfig.width = 1
-        streamConfig.height = 1
+        // Fix: Use actual display dimensions, otherwise SCStream returns nil
+        // ScreenCaptureKit requires valid video dimensions even for audio-only capture
+        streamConfig.width = availableContent.displays[0].width
+        streamConfig.height = availableContent.displays[0].height
+
+        // Keep frame rate as low as possible since we only want audio
         streamConfig.minimumFrameInterval = CMTime(value: 1, timescale: 1)
 
         // Create and start stream
         stream = SCStream(filter: filter, configuration: streamConfig, delegate: self)
 
-        try stream?.addStreamOutput(self, type: .audio, sampleHandlerQueue: .main)
-        try await stream?.startCapture()
+        guard let stream = stream else {
+            throw NSError(domain: "ScreenAudioCapturer", code: 2,
+                         userInfo: [NSLocalizedDescriptionKey: "Failed to create SCStream"])
+        }
+
+        try stream.addStreamOutput(self, type: .audio, sampleHandlerQueue: .main)
+        try await stream.startCapture()
 
         isCapturing = true
         fputs("INFO: ScreenCaptureKit audio capture started\n", stderr)
@@ -70,7 +84,7 @@ class ScreenAudioCapturer: NSObject, SCStreamDelegate, SCStreamOutput {
 
         // Get audio format
         guard let formatDescription = CMSampleBufferGetFormatDescription(sampleBuffer),
-              let streamBasicDescription = CMAudioFormatDescriptionGetStreamBasicDescription(formatDescription) else {
+              let _ = CMAudioFormatDescriptionGetStreamBasicDescription(formatDescription) else {
             return
         }
 
@@ -118,7 +132,7 @@ func main() async {
 
     // Request permission
     fputs("INFO: Requesting screen recording permission...\n", stderr)
-    let granted = await SCShareableContent.excludingDesktopWindows(false, onScreenWindowsOnly: true)
+    let _ = try? await SCShareableContent.excludingDesktopWindows(false, onScreenWindowsOnly: true)
 
     let capturer = ScreenAudioCapturer(sampleRate: sampleRate)
 
@@ -138,11 +152,13 @@ func main() async {
 }
 
 if #available(macOS 13.0, *) {
+    // Run main and exit when complete (don't keep RunLoop running)
     Task {
         await main()
+        exit(0)
     }
 
-    // Keep running
+    // Keep RunLoop alive temporarily, but exit() will terminate it
     RunLoop.main.run()
 } else {
     fputs("ERROR: ScreenCaptureKit requires macOS 13.0 or later\n", stderr)

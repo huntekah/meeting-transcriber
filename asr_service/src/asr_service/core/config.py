@@ -47,7 +47,7 @@ class Settings(BaseSettings):
     PORT: int = 8000
 
     # Output
-    OUTPUT_DIR: Path = Path("./output")
+    OUTPUT_DIR: Path = Path.home() / ".meeting_scribe" / "meetings"
 
     # CORS
     CORS_ORIGINS: List[str] = ["http://localhost:3000", "http://localhost:5173"]

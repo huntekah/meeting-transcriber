@@ -13,6 +13,8 @@ from cli_frontend.widgets.device_selector import DeviceSelector
 from cli_frontend.api.client import ASRClient
 from cli_frontend.config import CLISettings
 from cli_frontend.models import SourceConfig, AudioDevice
+from cli_frontend.settings_persistence import persistence
+from cli_frontend.logging import logger
 
 
 class SetupScreen(Screen):
@@ -79,16 +81,35 @@ class SetupScreen(Screen):
         try:
             self.devices = await self.client.get_devices()
 
-            # Populate device selectors
-            mic_selector = self.query_one("#mic_selector", DeviceSelector)
-            mic_selector.set_devices(self.devices, select_default=True)
+            # Log all devices received
+            logger.info(f"Received {len(self.devices)} devices from backend:")
+            for d in self.devices:
+                logger.info(f"  [{d.device_index}] {d.name} ({d.channels}ch, {d.sample_rate}Hz) - source_type={d.source_type}")
 
+            # Load saved device selections
+            saved_mic_idx, saved_system_idx = persistence.load_device_selection()
+            logger.debug(f"Loaded saved selections: mic={saved_mic_idx}, system={saved_system_idx}")
+
+            # Populate microphone selector
+            mic_selector = self.query_one("#mic_selector", DeviceSelector)
+            mic_selector.set_devices(
+                self.devices,
+                select_default=(saved_mic_idx is None),
+                pre_select_index=saved_mic_idx,
+            )
+
+            # Populate system audio selector
             system_selector = self.query_one("#system_selector", DeviceSelector)
-            system_selector.set_devices(self.devices, select_default=False)
+            system_selector.set_devices(
+                self.devices,
+                select_default=False,
+                pre_select_index=saved_system_idx,
+            )
 
             status.update(f"✓ Found {len(self.devices)} audio device(s)")
 
         except Exception as e:
+            logger.error(f"Error loading devices: {e}")
             status.update(f"❌ Error loading devices: {e}")
         finally:
             self.loading = False
@@ -127,6 +148,7 @@ class SetupScreen(Screen):
                         device_index=mic_idx,
                         device_name=device.name,
                         device_channels=device.channels,
+                        source_type=device.source_type,
                     )
                 )
 
@@ -140,12 +162,18 @@ class SetupScreen(Screen):
                         device_index=system_idx,
                         device_name=device.name,
                         device_channels=device.channels,
+                        source_type=device.source_type,
                     )
                 )
 
         if not sources:
             status.update("❌ Invalid device selection")
             return
+
+        # Save device selections for next time
+        persistence.save_device_selection(mic_idx, system_idx)
+        persistence.save_output_dir(output_dir)
+        logger.debug(f"Saved device selection: mic={mic_idx}, system={system_idx}, output={output_dir}")
 
         # Create session
         status.update("Creating session...")

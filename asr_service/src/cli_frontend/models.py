@@ -16,6 +16,7 @@ class AudioDevice(BaseModel):
     channels: int
     sample_rate: int
     is_default: bool
+    source_type: str = "sounddevice"  # "sounddevice" or "screencapture"
 
 
 class SourceConfig(BaseModel):
@@ -24,6 +25,7 @@ class SourceConfig(BaseModel):
     device_index: int
     device_name: str
     device_channels: int = 1  # Default to mono
+    source_type: str = "sounddevice"  # "sounddevice" or "screencapture"
 
 
 class Utterance(BaseModel):

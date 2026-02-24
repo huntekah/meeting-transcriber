@@ -20,6 +20,7 @@ def test_screencapture_audio(duration: int = 10, sample_rate: int = 16000):
     """
     script_dir = Path(__file__).parent
     swift_script = script_dir / "screencapture_audio.swift"
+    swift_binary = script_dir / "screencapture_audio"
 
     if not swift_script.exists():
         print(f"❌ Swift script not found: {swift_script}")
@@ -40,35 +41,62 @@ def test_screencapture_audio(duration: int = 10, sample_rate: int = 16000):
     # Wait for user
     input("Press Enter when ready to capture...")
 
-    # Run Swift script and capture stdout
+    # Compile Swift script if needed (fixes macOS permission chain issues)
+    print("\n🔨 Compiling Swift script into binary for better macOS permissions...")
+    if not swift_binary.exists() or swift_binary.stat().st_mtime < swift_script.stat().st_mtime:
+        try:
+            subprocess.run(
+                ["swiftc", str(swift_script), "-o", str(swift_binary)],
+                check=True,
+                capture_output=True,
+            )
+            print("✅ Compilation successful")
+        except subprocess.CalledProcessError as e:
+            print(f"❌ Failed to compile Swift script: {e}")
+            print(e.stderr.decode('utf-8', errors='ignore'))
+            return
+    else:
+        print("✅ Using cached binary")
+
+    # Run compiled binary and capture stdout
     print("\n📹 Starting ScreenCaptureKit capture...")
 
     try:
         process = subprocess.Popen(
-            ["swift", str(swift_script), str(sample_rate), str(duration)],
+            [str(swift_binary), str(sample_rate), str(duration)],
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
         )
 
-        # Read raw PCM from stdout
-        audio_bytes = bytearray()
-
-        while True:
-            chunk = process.stdout.read(4096)
-            if not chunk:
-                break
-            audio_bytes.extend(chunk)
-
-        # Wait for process to finish
-        process.wait()
+        # Wait for process to complete with timeout (allow extra time for startup/shutdown)
+        timeout_seconds = duration + 5
+        try:
+            stdout_data, stderr_data = process.communicate(timeout=timeout_seconds)
+            audio_bytes = bytearray(stdout_data)
+            stderr_output = stderr_data.decode('utf-8', errors='ignore')
+        except subprocess.TimeoutExpired:
+            print(f"\n⏱️  Timeout after {timeout_seconds}s - process didn't complete, terminating...")
+            process.kill()
+            stdout_data, stderr_data = process.communicate(timeout=2)
+            audio_bytes = bytearray(stdout_data) if stdout_data else bytearray()
+            stderr_output = stderr_data.decode('utf-8', errors='ignore')
 
         # Print stderr (info messages)
-        stderr_output = process.stderr.read().decode('utf-8', errors='ignore')
         print("\nSwift output:")
         print(stderr_output)
 
         if process.returncode != 0:
-            print(f"❌ Swift script failed with exit code {process.returncode}")
+            print(f"\n❌ Swift script failed with exit code {process.returncode}")
+            if "Stream is nil" in stderr_output or "Start stream failed" in stderr_output:
+                print("\n⚠️  PERMISSION DENIED: Screen Recording permission not granted!")
+                print("\nTo enable Screen Recording permission:")
+                print("1. Open System Settings")
+                print("2. Go to Privacy & Security → Screen Recording")
+                print("3. Add Terminal (or Python) to the allowed apps")
+                print("4. Try again")
+                print("\nIf you don't see Terminal/Python in the list, try:")
+                print("   - python scripts/test_screencapture.py (if running with 'python')")
+                print("   - Or use Terminal app instead of IDE terminal")
             return
 
         # Convert bytes to numpy array (float32)

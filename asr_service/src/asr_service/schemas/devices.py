@@ -17,6 +17,7 @@ class AudioDevice(BaseModel):
         channels: Number of input channels
         sample_rate: Default sample rate in Hz
         is_default: Whether this is the system default input device
+        source_type: Type of audio source ("sounddevice" or "screencapture")
     """
 
     device_index: int = Field(..., description="Device index")
@@ -24,6 +25,7 @@ class AudioDevice(BaseModel):
     channels: int = Field(..., description="Number of input channels")
     sample_rate: int = Field(..., description="Default sample rate in Hz")
     is_default: bool = Field(False, description="Is default input device")
+    source_type: str = Field("sounddevice", description="Audio source type (sounddevice or screencapture)")
 
     class Config:
         json_schema_extra = {
@@ -33,5 +35,6 @@ class AudioDevice(BaseModel):
                 "channels": 1,
                 "sample_rate": 48000,
                 "is_default": True,
+                "source_type": "sounddevice",
             }
         }

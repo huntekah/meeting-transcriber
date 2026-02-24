@@ -60,17 +60,31 @@ class DeviceSelector(Select):
             options.append((label, device.device_index))
         return options
 
-    def set_devices(self, devices: List[AudioDevice], select_default: bool = True):
+    def set_devices(
+        self,
+        devices: List[AudioDevice],
+        select_default: bool = True,
+        pre_select_index: Optional[int] = None,
+    ):
         """
         Update device list and refresh options.
 
         Args:
             devices: New list of devices
-            select_default: Whether to auto-select default device
+            select_default: Whether to auto-select default device if pre_select_index is not provided
+            pre_select_index: Specific device_index to pre-select (takes precedence over select_default)
         """
         self.devices = devices
         options = self._create_options(devices)
         self.set_options(options)
+
+        # Pre-select specific device if provided
+        if pre_select_index is not None:
+            # Check if device exists in the list
+            device_indices = [d.device_index for d in devices]
+            if pre_select_index in device_indices:
+                self.value = pre_select_index
+                return
 
         # Auto-select default device if requested
         if select_default:

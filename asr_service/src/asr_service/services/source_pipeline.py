@@ -1,7 +1,7 @@
 """
 Source pipeline service.
 
-Composes VADAudioProducer + LiveTranscriber for a single audio source.
+Composes AudioProducerBase + LiveTranscriber for a single audio source.
 Represents one audio stream in a multi-source session.
 """
 
@@ -13,13 +13,13 @@ import torch
 
 from ..core.logging import logger
 from ..schemas.transcription import Utterance
-from .vad_producer import VADAudioProducer
+from .audio_producer import AudioProducerBase
 from .live_transcriber import LiveTranscriber
 
 
 class SourcePipeline:
     """
-    Logical pairing of VADAudioProducer + LiveTranscriber.
+    Logical pairing of AudioProducerBase + LiveTranscriber.
 
     Represents one audio source in a multi-source session.
     Handles producer-consumer communication via queue.
@@ -28,12 +28,9 @@ class SourcePipeline:
     def __init__(
         self,
         source_id: int,
-        device_index: int,
-        device_name: str,
-        vad_model: torch.nn.Module,
+        producer: AudioProducerBase,
         whisper_model_name: str,
         utterance_callback: Callable[[Utterance], None],
-        device_channels: int = 1,
         language: str = "en",
     ):
         """
@@ -41,31 +38,21 @@ class SourcePipeline:
 
         Args:
             source_id: Unique source identifier
-            device_index: Audio device index
-            device_name: Human-readable device name
-            vad_model: Silero VAD model
+            producer: AudioProducerBase instance for capturing audio
             whisper_model_name: MLX-Whisper model name
             utterance_callback: Callback to receive transcribed utterances
-            device_channels: Number of input channels the device supports
             language: Language code for transcription
         """
         self.source_id = source_id
-        self.device_index = device_index
-        self.device_name = device_name
+        self.producer = producer
+        self.device_name = producer.device_name
 
         # Create shared queue between producer and consumer
         # Bounded queue to prevent memory issues
         self._audio_queue: queue.Queue = queue.Queue(maxsize=10)
 
-        # Create producer
-        self.producer = VADAudioProducer(
-            source_id=source_id,
-            device_index=device_index,
-            device_name=device_name,
-            vad_model=vad_model,
-            output_queue=self._audio_queue,
-            device_channels=device_channels,
-        )
+        # Update producer's output queue to use our queue
+        self.producer.output_queue = self._audio_queue
 
         # Create consumer
         self.transcriber = LiveTranscriber(
@@ -77,7 +64,7 @@ class SourcePipeline:
         )
 
         logger.info(
-            f"SourcePipeline {source_id} initialized for device '{device_name}' (index {device_index})"
+            f"SourcePipeline {source_id} initialized for device '{self.device_name}'"
         )
 
     def start(self, session_start_time: float | None = None):

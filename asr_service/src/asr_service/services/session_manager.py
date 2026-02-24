@@ -66,7 +66,11 @@ class SessionManager:
         session_id = str(uuid.uuid4())
 
         # Use default output dir if not specified
-        output_dir = Path(output_dir) if output_dir else settings.OUTPUT_DIR
+        if output_dir:
+            # Expand tilde to home directory
+            output_dir = Path(output_dir).expanduser()
+        else:
+            output_dir = settings.OUTPUT_DIR
 
         # Create session
         session = ActiveSession(

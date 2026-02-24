@@ -8,6 +8,7 @@ Orchestrates N SourcePipelines, ChronologicalMerger, and WebSocket broadcasting.
 import time
 import asyncio
 import threading
+import queue
 from pathlib import Path
 from datetime import datetime
 from typing import List, Dict, Any, Optional
@@ -32,6 +33,8 @@ from .source_pipeline import SourcePipeline
 from .transcript_merger import ChronologicalMerger
 from .audio_mixer import AudioMixer
 from .cold_transcriber import ColdPathPostProcessor
+from .vad_producer import VADAudioProducer
+from .screencapture_producer import ScreenCaptureAudioProducer
 
 
 class ActiveSession:
@@ -122,14 +125,15 @@ class ActiveSession:
 
             # Create pipelines for each source
             for idx, source_config in enumerate(self.sources):
+                # Create appropriate producer based on source_type
+                producer = self._create_producer(idx, source_config)
+
+                # Create pipeline with producer
                 pipeline = SourcePipeline(
                     source_id=idx,
-                    device_index=source_config.device_index,
-                    device_name=source_config.device_name,
-                    vad_model=self.model_manager.vad_model,
+                    producer=producer,
                     whisper_model_name=self.model_manager.whisper_model_name,
                     utterance_callback=self._on_utterance,
-                    device_channels=source_config.device_channels,
                     language="en",
                 )
                 self.pipelines.append(pipeline)
@@ -274,6 +278,41 @@ class ActiveSession:
                 type="final_transcript", transcript=self.final_transcript
             )
         )
+
+    def _create_producer(self, source_id: int, source_config: SourceConfig):
+        """
+        Create an appropriate audio producer based on source_type.
+
+        Args:
+            source_id: Unique source identifier
+            source_config: Source configuration with device_index, device_name, source_type
+
+        Returns:
+            AudioProducerBase instance (VADAudioProducer or ScreenCaptureAudioProducer)
+        """
+        source_type = getattr(source_config, "source_type", "sounddevice")
+
+        if source_type == "screencapture":
+            logger.info(f"Creating ScreenCaptureAudioProducer for source {source_id}")
+            return ScreenCaptureAudioProducer(
+                source_id=source_id,
+                device_name=source_config.device_name,
+                output_queue=queue.Queue(),  # Will be overwritten by SourcePipeline
+            )
+        else:
+            # Default: sounddevice
+            logger.info(
+                f"Creating VADAudioProducer for source {source_id} "
+                f"(device_index={source_config.device_index})"
+            )
+            return VADAudioProducer(
+                source_id=source_id,
+                device_index=source_config.device_index,
+                device_name=source_config.device_name,
+                vad_model=self.model_manager.vad_model,
+                output_queue=queue.Queue(),  # Will be overwritten by SourcePipeline
+                device_channels=source_config.device_channels,
+            )
 
     def _on_utterance(self, utterance: Utterance):
         """

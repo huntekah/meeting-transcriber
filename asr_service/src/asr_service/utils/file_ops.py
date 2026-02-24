@@ -5,6 +5,30 @@ from typing import Generator
 from asr_service.core.logging import logger
 
 
+def get_project_root() -> Path:
+    """
+    Find the project root directory by searching for pyproject.toml.
+
+    Searches upwards from the current file's directory until pyproject.toml is found.
+
+    Returns:
+        Path to the project root directory
+
+    Raises:
+        FileNotFoundError: If pyproject.toml is not found in any parent directory
+    """
+    current_dir = Path(__file__).resolve().parent
+
+    # Check current dir and all parents
+    for directory in [current_dir, *current_dir.parents]:
+        if (directory / "pyproject.toml").exists():
+            return directory
+
+    raise FileNotFoundError(
+        "Could not find project root (pyproject.toml not found)."
+    )
+
+
 @contextmanager
 def create_temp_file(suffix: str = ".tmp") -> Generator:
     """

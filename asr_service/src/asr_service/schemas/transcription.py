@@ -69,11 +69,13 @@ class SourceConfig(BaseModel):
         device_index: Device index to capture from
         device_name: Human-readable device name/label
         device_channels: Number of input channels (1=mono, 2=stereo, etc.)
+        source_type: Type of audio source ("sounddevice" or "screencapture")
     """
 
     device_index: int = Field(..., description="Device index")
     device_name: str = Field(..., description="Device name/label")
     device_channels: int = Field(default=1, description="Number of input channels")
+    source_type: str = Field(default="sounddevice", description="Audio source type (sounddevice or screencapture)")
 
     class Config:
         json_schema_extra = {
@@ -81,6 +83,7 @@ class SourceConfig(BaseModel):
                 "device_index": 0,
                 "device_name": "Microphone",
                 "device_channels": 1,
+                "source_type": "sounddevice",
             }
         }
 

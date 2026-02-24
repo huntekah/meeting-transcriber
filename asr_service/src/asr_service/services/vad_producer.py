@@ -16,13 +16,14 @@ import torch
 from ..core.config import settings
 from ..core.logging import logger
 from ..core.exceptions import AudioCaptureError
+from .audio_producer import AudioProducerBase
 
 # Global lock to serialize VAD model access across all sources
 # Silero VAD is NOT thread-safe - internal RNN state gets corrupted with concurrent calls
 _VAD_MODEL_LOCK = threading.Lock()
 
 
-class VADAudioProducer:
+class VADAudioProducer(AudioProducerBase):
     """
     Thread-based audio capture with VAD-driven segmentation.
 
@@ -60,15 +61,22 @@ class VADAudioProducer:
             vad_threshold: Speech probability threshold (default from settings)
             silence_chunks: Number of silence chunks to trigger finalization (default from settings)
         """
-        self.source_id = source_id
+        # Determine effective sample rate for parent initialization
+        effective_sample_rate = sample_rate or settings.SAMPLE_RATE
+
+        # Initialize parent class
+        super().__init__(
+            source_id=source_id,
+            device_name=device_name,
+            output_queue=output_queue,
+            sample_rate=effective_sample_rate,
+        )
+
         self.device_index = device_index
-        self.device_name = device_name
         self.vad_model = vad_model
-        self.output_queue = output_queue
 
         # Audio settings
         self.device_channels = device_channels
-        self.sample_rate = sample_rate or settings.SAMPLE_RATE
         self.chunk_size = chunk_size or settings.CHUNK_SIZE
         self.vad_threshold = vad_threshold or settings.VAD_THRESHOLD
         self.silence_chunks = silence_chunks or settings.SILENCE_CHUNKS
