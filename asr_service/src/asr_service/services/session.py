@@ -168,15 +168,17 @@ class ActiveSession:
 
     async def stop_recording(self):
         """
-        RECORDING → STOPPING → PROCESSING → COMPLETED transition.
+        RECORDING → STOPPING → PROCESSING transition (cold path runs in background).
 
         Steps:
         1. Stop all pipelines gracefully
         2. Collect audio from each source
         3. Mix to mono
         4. Save mixed audio
-        5. Run cold path post-processing
-        6. Transition to COMPLETED
+        5. Transition to PROCESSING
+        6. Schedule cold path post-processing in background (returns immediately)
+
+        Cold path completes asynchronously and transitions to COMPLETED when done.
         """
         logger.info(f"Stopping recording for session {self.session_id}...")
         self._set_state(SessionState.STOPPING)
@@ -210,18 +212,34 @@ class ActiveSession:
             # Transition to processing
             self._set_state(SessionState.PROCESSING)
 
-            # Run cold path (async to not block)
-            await self._run_cold_path()
+            # Schedule cold path to run in background (fire-and-forget)
+            asyncio.create_task(self._run_cold_path_background())
 
-            # Transition to completed
-            self._set_state(SessionState.COMPLETED)
-
-            logger.info(f"Session {self.session_id} completed successfully")
+            logger.info(f"Session {self.session_id} stop completed, cold path processing in background")
 
         except Exception as e:
             logger.error(f"Session {self.session_id} stop failed: {e}", exc_info=True)
             self._set_state(SessionState.FAILED)
             raise
+
+    async def _run_cold_path_background(self):
+        """
+        Run cold path post-processing in background and transition to COMPLETED.
+
+        This is called as a background task after stop_recording() completes,
+        allowing the frontend to start a new recording immediately while the
+        cold pipeline processes in the background.
+        """
+        try:
+            await self._run_cold_path()
+            # Transition to completed after cold path finishes
+            self._set_state(SessionState.COMPLETED)
+            logger.info(f"Session {self.session_id} completed successfully (background)")
+        except Exception as e:
+            logger.error(
+                f"Session {self.session_id} cold path failed: {e}", exc_info=True
+            )
+            self._set_state(SessionState.FAILED)
 
     async def _run_cold_path(self):
         """Run cold path post-processing in executor."""
