@@ -75,7 +75,10 @@ class SourceConfig(BaseModel):
     device_index: int = Field(..., description="Device index")
     device_name: str = Field(..., description="Device name/label")
     device_channels: int = Field(default=1, description="Number of input channels")
-    source_type: str = Field(default="sounddevice", description="Audio source type (sounddevice or screencapture)")
+    source_type: str = Field(
+        default="sounddevice",
+        description="Audio source type (sounddevice or screencapture)",
+    )
 
     class Config:
         json_schema_extra = {

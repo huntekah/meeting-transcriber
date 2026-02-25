@@ -90,7 +90,9 @@ class RecordingScreen(Screen):
             try:
                 logger.info(f"Processing utterance message: {data}")
                 msg = WSUtteranceMessage(**data)
-                logger.info(f"Parsed utterance: source={msg.data.source_id}, text='{msg.data.text[:50]}...'")
+                logger.info(
+                    f"Parsed utterance: source={msg.data.source_id}, text='{msg.data.text[:50]}...'"
+                )
 
                 transcript = self.query_one("#transcript", TranscriptView)
                 logger.debug(f"Got TranscriptView widget: {transcript}")

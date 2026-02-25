@@ -18,7 +18,9 @@ class CLISettings(BaseSettings):
 
     # Device selection persistence
     last_mic_device_index: int = 0  # Remember last microphone selection
-    last_system_audio_device_index: int = -1  # Remember last system audio (default -1 = ScreenCaptureKit)
+    last_system_audio_device_index: int = (
+        -1
+    )  # Remember last system audio (default -1 = ScreenCaptureKit)
 
     class Config:
         env_prefix = "CLI_"

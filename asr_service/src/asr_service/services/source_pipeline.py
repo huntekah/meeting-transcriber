@@ -9,7 +9,6 @@ import time
 import queue
 from typing import Callable, Dict, Any
 import numpy as np
-import torch
 
 from ..core.logging import logger
 from ..schemas.transcription import Utterance

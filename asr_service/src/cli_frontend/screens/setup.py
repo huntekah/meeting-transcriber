@@ -84,11 +84,15 @@ class SetupScreen(Screen):
             # Log all devices received
             logger.info(f"Received {len(self.devices)} devices from backend:")
             for d in self.devices:
-                logger.info(f"  [{d.device_index}] {d.name} ({d.channels}ch, {d.sample_rate}Hz) - source_type={d.source_type}")
+                logger.info(
+                    f"  [{d.device_index}] {d.name} ({d.channels}ch, {d.sample_rate}Hz) - source_type={d.source_type}"
+                )
 
             # Load saved device selections
             saved_mic_idx, saved_system_idx = persistence.load_device_selection()
-            logger.debug(f"Loaded saved selections: mic={saved_mic_idx}, system={saved_system_idx}")
+            logger.debug(
+                f"Loaded saved selections: mic={saved_mic_idx}, system={saved_system_idx}"
+            )
 
             # Populate microphone selector
             mic_selector = self.query_one("#mic_selector", DeviceSelector)
@@ -173,7 +177,9 @@ class SetupScreen(Screen):
         # Save device selections for next time
         persistence.save_device_selection(mic_idx, system_idx)
         persistence.save_output_dir(output_dir)
-        logger.debug(f"Saved device selection: mic={mic_idx}, system={system_idx}, output={output_dir}")
+        logger.debug(
+            f"Saved device selection: mic={mic_idx}, system={system_idx}, output={output_dir}"
+        )
 
         # Create session
         status.update("Creating session...")

@@ -51,9 +51,13 @@ def list_audio_devices() -> List[AudioDevice]:
                         source_type="sounddevice",
                     )
                 )
-                logger.debug(f"  [{idx}] {device['name']} - {device['max_input_channels']}ch, {int(device['default_samplerate'])}Hz")
+                logger.debug(
+                    f"  [{idx}] {device['name']} - {device['max_input_channels']}ch, {int(device['default_samplerate'])}Hz"
+                )
             else:
-                logger.debug(f"  [{idx}] FILTERED OUT: {device['name']} (output-only, {device['max_input_channels']} input channels)")
+                logger.debug(
+                    f"  [{idx}] FILTERED OUT: {device['name']} (output-only, {device['max_input_channels']} input channels)"
+                )
 
         logger.info(f"Found {len(input_devices)} sounddevice input devices")
 
@@ -61,7 +65,9 @@ def list_audio_devices() -> List[AudioDevice]:
         is_macos_13_plus = _is_macos_13_or_later()
         is_binary_available = _is_screencapture_binary_available()
 
-        logger.debug(f"ScreenCaptureKit availability check: macOS 13+={is_macos_13_plus}, binary={is_binary_available}")
+        logger.debug(
+            f"ScreenCaptureKit availability check: macOS 13+={is_macos_13_plus}, binary={is_binary_available}"
+        )
 
         if is_macos_13_plus and is_binary_available:
             screencapture_device = AudioDevice(
@@ -78,7 +84,9 @@ def list_audio_devices() -> List[AudioDevice]:
                 input_devices.insert(1, screencapture_device)
             else:
                 input_devices.append(screencapture_device)
-            logger.info("✅ Added ScreenCaptureKit virtual device (macOS 13+, binary available)")
+            logger.info(
+                "✅ Added ScreenCaptureKit virtual device (macOS 13+, binary available)"
+            )
         elif not is_macos_13_plus:
             logger.debug("⏭️  ScreenCaptureKit not available: macOS version < 13.0")
         elif not is_binary_available:
@@ -87,7 +95,9 @@ def list_audio_devices() -> List[AudioDevice]:
         # Log final device list
         logger.info(f"Available audio devices ({len(input_devices)} total):")
         for device in input_devices:
-            logger.info(f"  [{device.device_index}] {device.name} ({device.channels}ch, {device.sample_rate}Hz) - source_type={device.source_type}")
+            logger.info(
+                f"  [{device.device_index}] {device.name} ({device.channels}ch, {device.sample_rate}Hz) - source_type={device.source_type}"
+            )
 
         return input_devices
 
@@ -114,7 +124,9 @@ def _is_macos_13_or_later() -> bool:
         version = platform.mac_ver()[0]
         major_version = int(version.split(".")[0])
         is_13_plus = major_version >= 13
-        logger.debug(f"macOS version: {version} (major={major_version}, 13+={is_13_plus})")
+        logger.debug(
+            f"macOS version: {version} (major={major_version}, 13+={is_13_plus})"
+        )
         return is_13_plus
     except (IndexError, ValueError):
         logger.warning(f"Could not parse macOS version: {version}")

@@ -22,7 +22,9 @@ class SettingsPersistence:
         # Ensure config directory exists
         self.config_dir.mkdir(parents=True, exist_ok=True)
 
-    def save_device_selection(self, mic_device_index: int | None, system_device_index: int | None):
+    def save_device_selection(
+        self, mic_device_index: int | None, system_device_index: int | None
+    ):
         """
         Save device selection to config file.
 

@@ -62,7 +62,9 @@ class AudioMixer:
         padded: List[np.ndarray] = []
         for idx, audio in enumerate(audio_sources):
             if len(audio) < max_length:
-                padding: np.ndarray = np.zeros(max_length - len(audio), dtype=audio.dtype)
+                padding: np.ndarray = np.zeros(
+                    max_length - len(audio), dtype=audio.dtype
+                )
                 audio = np.concatenate([audio, padding])
                 logger.debug(
                     f"Padded source {idx}: {len(audio_sources[idx])} → {len(audio)} samples"
@@ -122,7 +124,9 @@ class AudioMixer:
         padded: List[np.ndarray] = []
         for audio in audio_sources:
             if len(audio) < max_length:
-                padding: np.ndarray = np.zeros(max_length - len(audio), dtype=audio.dtype)
+                padding: np.ndarray = np.zeros(
+                    max_length - len(audio), dtype=audio.dtype
+                )
                 audio = np.concatenate([audio, padding])
             padded.append(audio)
 

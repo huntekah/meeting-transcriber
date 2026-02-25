@@ -51,10 +51,14 @@ class Settings(BaseSettings):
     COLD_PATH_CHUNK_DURATION: int = 300  # 5 minutes in seconds
     COLD_PATH_OVERLAP: int = 5  # 5 seconds overlap between chunks
     COLD_PATH_PARALLEL: bool = True  # Run diarization + transcription in parallel
-    GLOBAL_DIARIZATION_ENABLED: bool = True  # Run diarization once on full audio for chunks
+    GLOBAL_DIARIZATION_ENABLED: bool = (
+        True  # Run diarization once on full audio for chunks
+    )
 
     # Server settings
-    HOST: str = "127.0.0.1"  # Bind to localhost by default (set to 0.0.0.0 to expose publicly)
+    HOST: str = (
+        "127.0.0.1"  # Bind to localhost by default (set to 0.0.0.0 to expose publicly)
+    )
     PORT: int = 8000
 
     # Output

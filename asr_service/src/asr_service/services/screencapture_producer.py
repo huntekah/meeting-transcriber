@@ -132,7 +132,9 @@ class ScreenCaptureAudioProducer(AudioProducerBase):
                 stderr=subprocess.PIPE,
                 bufsize=0,  # Unbuffered
             )
-            logger.info(f"ScreenCaptureKit subprocess started (PID: {self._process.pid})")
+            logger.info(
+                f"ScreenCaptureKit subprocess started (PID: {self._process.pid})"
+            )
         except Exception as e:
             logger.error(f"Failed to start ScreenCaptureKit subprocess: {e}")
             self._process = None
@@ -184,11 +186,11 @@ class ScreenCaptureAudioProducer(AudioProducerBase):
                 self._process.terminate()
                 # Wait for process to exit (with timeout)
                 self._process.wait(timeout=2.0)
-                logger.info(f"ScreenCaptureKit process terminated (PID: {self._process.pid})")
-            except subprocess.TimeoutExpired:
-                logger.warning(
-                    f"ScreenCaptureKit process didn't terminate, killing it"
+                logger.info(
+                    f"ScreenCaptureKit process terminated (PID: {self._process.pid})"
                 )
+            except subprocess.TimeoutExpired:
+                logger.warning("ScreenCaptureKit process didn't terminate, killing it")
                 self._process.kill()
                 self._process.wait()
             self._process = None
@@ -260,8 +262,8 @@ class ScreenCaptureAudioProducer(AudioProducerBase):
 
                     # Push segment if we have enough audio
                     while len(buffer) >= self.segment_samples:
-                        segment_audio = buffer[:self.segment_samples]
-                        buffer = buffer[self.segment_samples:]
+                        segment_audio = buffer[: self.segment_samples]
+                        buffer = buffer[self.segment_samples :]
                         self._push_segment(segment_audio)
 
                 except Exception as e:
@@ -296,6 +298,7 @@ class ScreenCaptureAudioProducer(AudioProducerBase):
                 logger.warning(f"ScreenCaptureKit[{self.source_id}] {line}")
 
         logger.debug(f"Stderr loop exited for source {self.source_id}")
+
     def _push_segment(self, audio_data: np.ndarray):
         """
         Push audio segment to output queue.
@@ -355,7 +358,8 @@ class ScreenCaptureAudioProducer(AudioProducerBase):
                 "source_id": self.source_id,
                 "device_name": self.device_name,
                 "device_type": "screencapture",
-                "is_running": self._process is not None and self._process.poll() is None,
+                "is_running": self._process is not None
+                and self._process.poll() is None,
                 "total_segments": self._total_segments_captured,
                 "total_samples": self._total_samples_captured,
                 "binary_path": str(self.binary_path),

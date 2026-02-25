@@ -93,7 +93,9 @@ class ActiveSession:
         # WebSocket connections
         self._websocket_clients: List[WebSocket] = []
         self._ws_lock = asyncio.Lock()
-        self._event_loop: Optional[asyncio.AbstractEventLoop] = None  # Store event loop for thread-safe async calls
+        self._event_loop: Optional[asyncio.AbstractEventLoop] = (
+            None  # Store event loop for thread-safe async calls
+        )
 
         # Results
         self.live_transcript: Optional[List[Utterance]] = None
@@ -225,7 +227,9 @@ class ActiveSession:
             # Schedule cold path to run in background (fire-and-forget)
             asyncio.create_task(self._run_cold_path_background())
 
-            logger.info(f"Session {self.session_id} stop completed, cold path processing in background")
+            logger.info(
+                f"Session {self.session_id} stop completed, cold path processing in background"
+            )
 
         except Exception as e:
             logger.error(f"Session {self.session_id} stop failed: {e}", exc_info=True)
@@ -258,7 +262,9 @@ class ActiveSession:
             await self._run_cold_path()
             # Transition to completed after cold path finishes
             self._set_state(SessionState.COMPLETED)
-            logger.info(f"Session {self.session_id} completed successfully (background)")
+            logger.info(
+                f"Session {self.session_id} completed successfully (background)"
+            )
         except Exception as e:
             logger.error(
                 f"Session {self.session_id} cold path failed: {e}", exc_info=True
@@ -368,10 +374,11 @@ class ActiveSession:
         message = WSUtteranceMessage(type="utterance", data=utterance)
         try:
             asyncio.run_coroutine_threadsafe(
-                self._broadcast_message(message),
-                self._event_loop
+                self._broadcast_message(message), self._event_loop
             )
-            logger.debug(f"Utterance broadcast scheduled to event loop {self._event_loop}")
+            logger.debug(
+                f"Utterance broadcast scheduled to event loop {self._event_loop}"
+            )
         except Exception as e:
             logger.error(f"Failed to schedule utterance broadcast: {e}", exc_info=True)
 
@@ -453,15 +460,16 @@ class ActiveSession:
         # Broadcast state change (fire and forget)
         if self._event_loop is None:
             # No event loop yet - this is expected during initialization before initialize() is called
-            logger.debug(f"Event loop not yet set, skipping state broadcast for {new_state.value}")
+            logger.debug(
+                f"Event loop not yet set, skipping state broadcast for {new_state.value}"
+            )
             return
 
         # Schedule async broadcast using thread-safe method
         message = WSStateChangeMessage(type="state_change", state=new_state)
         try:
             asyncio.run_coroutine_threadsafe(
-                self._broadcast_message(message),
-                self._event_loop
+                self._broadcast_message(message), self._event_loop
             )
         except Exception as e:
             logger.error(f"Failed to schedule state broadcast: {e}", exc_info=True)
@@ -522,7 +530,9 @@ class ActiveSession:
         Creates a human-readable markdown transcript with speaker labels and timestamps.
         """
         if not self.final_transcript:
-            logger.warning(f"Session {self.session_id}: No final transcript to save as markdown")
+            logger.warning(
+                f"Session {self.session_id}: No final transcript to save as markdown"
+            )
             return
 
         try:
@@ -539,13 +549,19 @@ class ActiveSession:
             lines = []
 
             # Header with date
-            date_str = self.started_at.strftime("%Y-%m-%d") if self.started_at else "Unknown Date"
+            date_str = (
+                self.started_at.strftime("%Y-%m-%d")
+                if self.started_at
+                else "Unknown Date"
+            )
             lines.append(f"# Meeting Transcript: {date_str}")
 
             # Metadata
             duration = self.final_transcript.duration
             language = self.final_transcript.language
-            lines.append(f"**Duration:** {format_timestamp(duration)} | **Language:** {language}")
+            lines.append(
+                f"**Duration:** {format_timestamp(duration)} | **Language:** {language}"
+            )
             lines.append("---")
             lines.append("## Transcript")
 

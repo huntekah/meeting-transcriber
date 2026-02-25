@@ -142,6 +142,7 @@ class ColdPathPostProcessor:
             logger.info(f"Audio ≤ {chunk_duration}s, processing directly")
             # CRITICAL: Serialize pipeline access (pyannote/Numba not thread-safe)
             from .model_manager import ModelManager
+
             with ModelManager._cold_pipeline_lock:
                 return self.pipeline.process(str(audio_path))
 
@@ -154,6 +155,7 @@ class ColdPathPostProcessor:
         # Process each chunk using secure temporary directory
         all_segments = []
         import shutil
+
         temp_dir = tempfile.mkdtemp(prefix=f"asr_chunks_{uuid.uuid4().hex[:8]}_")
         try:
             for chunk_idx, (start_sample, end_sample) in tqdm(
@@ -161,8 +163,8 @@ class ColdPathPostProcessor:
                 total=len(chunks),
                 desc="Transcribing",
                 unit="chunk",
-                miniters=max(1, len(chunks)//20),
-                leave=False
+                miniters=max(1, len(chunks) // 20),
+                leave=False,
             ):
                 logger.debug(
                     f"Processing chunk {chunk_idx + 1}/{len(chunks)} "
@@ -181,17 +183,23 @@ class ColdPathPostProcessor:
                     # Process chunk (with lock for thread safety)
                     from .model_manager import ModelManager
                     import threading
+
                     chunk_start_time = time.time()
-                    logger.debug(f"Running Whisper + Diarization on chunk {chunk_idx + 1}...")
+                    logger.debug(
+                        f"Running Whisper + Diarization on chunk {chunk_idx + 1}..."
+                    )
 
                     # Heartbeat thread to show progress during long transcription
                     heartbeat_stop = threading.Event()
+
                     def heartbeat():
                         while not heartbeat_stop.is_set():
                             heartbeat_stop.wait(60)  # Every 60 seconds
                             if not heartbeat_stop.is_set():
                                 elapsed = time.time() - chunk_start_time
-                                logger.info(f"Chunk {chunk_idx + 1}/{len(chunks)} still processing ({elapsed:.0f}s elapsed)")
+                                logger.info(
+                                    f"Chunk {chunk_idx + 1}/{len(chunks)} still processing ({elapsed:.0f}s elapsed)"
+                                )
 
                     heartbeat_thread = threading.Thread(target=heartbeat, daemon=True)
                     heartbeat_thread.start()
@@ -199,8 +207,7 @@ class ColdPathPostProcessor:
                     try:
                         with ModelManager._cold_pipeline_lock:
                             result = self.pipeline.process(
-                                str(chunk_path),
-                                use_diarization=False
+                                str(chunk_path), use_diarization=False
                             )
                     finally:
                         heartbeat_stop.set()
@@ -242,16 +249,19 @@ class ColdPathPostProcessor:
             logger.info("Running global speaker diarization on full audio...")
             global_start = time.time()
             from .model_manager import ModelManager
+
             with ModelManager._cold_pipeline_lock:
                 final_result = self.pipeline.align_global_speakers(
-                    audio_path,
-                    all_segments,
-                    language="en"
+                    audio_path, all_segments, language="en"
                 )
             global_elapsed = time.time() - global_start
             logger.info(f"Global diarization completed in {global_elapsed:.1f}s")
 
-        return {"segments": final_result["segments"], "duration": duration, "language": "en"}
+        return {
+            "segments": final_result["segments"],
+            "duration": duration,
+            "language": "en",
+        }
 
     def _find_silence_chunks(
         self,
@@ -288,7 +298,13 @@ class ColdPathPostProcessor:
         start_time = time.time()
 
         # Use tqdm with miniters to update every 5%
-        with tqdm(total=total_chunks, desc="VAD Analysis", unit="chunk", miniters=total_chunks//20, leave=False) as pbar:
+        with tqdm(
+            total=total_chunks,
+            desc="VAD Analysis",
+            unit="chunk",
+            miniters=total_chunks // 20,
+            leave=False,
+        ) as pbar:
             for i in range(0, len(audio), chunk_size):
                 chunk = audio[i : i + chunk_size]
                 if len(chunk) < chunk_size:
@@ -312,8 +328,12 @@ class ColdPathPostProcessor:
 
         silence_build_elapsed = time.time() - silence_build_start
         vad_elapsed = time.time() - start_time
-        logger.info(f"VAD analysis complete: {len(silence_regions)} silence regions found in {vad_elapsed:.1f}s")
-        logger.debug(f"  VAD inference: {vad_elapsed - silence_build_elapsed:.1f}s, silence building: {silence_build_elapsed:.1f}s")
+        logger.info(
+            f"VAD analysis complete: {len(silence_regions)} silence regions found in {vad_elapsed:.1f}s"
+        )
+        logger.debug(
+            f"  VAD inference: {vad_elapsed - silence_build_elapsed:.1f}s, silence building: {silence_build_elapsed:.1f}s"
+        )
 
         # Split at silence near target boundaries
         logger.debug("Creating chunks at silence boundaries...")
@@ -326,7 +346,13 @@ class ColdPathPostProcessor:
         # Estimate max chunks for progress bar (audio_duration / chunk_duration)
         estimated_chunks = int(len(audio) / (target_chunk_duration * sr)) + 2
 
-        with tqdm(total=estimated_chunks, desc="Chunking", unit="chunk", miniters=max(1, estimated_chunks//20), leave=False) as pbar:
+        with tqdm(
+            total=estimated_chunks,
+            desc="Chunking",
+            unit="chunk",
+            miniters=max(1, estimated_chunks // 20),
+            leave=False,
+        ) as pbar:
             while current_start < len(audio):
                 chunk_iteration += 1
 
@@ -368,15 +394,23 @@ class ColdPathPostProcessor:
                 next_start = best_split - int(overlap * sr)
                 if next_start <= current_start:
                     # Overlap would cause backwards movement - advance by minimum amount
-                    next_start = current_start + int(sr)  # Move forward by 1 second minimum
-                    logger.debug(f"  Overlap adjustment: forcing forward progress at chunk {chunk_iteration}")
+                    next_start = current_start + int(
+                        sr
+                    )  # Move forward by 1 second minimum
+                    logger.debug(
+                        f"  Overlap adjustment: forcing forward progress at chunk {chunk_iteration}"
+                    )
 
                 current_start = next_start
 
                 # Safety check: prevent infinite loops
                 if chunk_iteration > 1000:
-                    logger.warning(f"  WARNING: Chunking loop exceeded 1000 iterations!")
-                    logger.warning(f"    current_start={current_start:,d}, audio_len={len(audio):,d}")
+                    logger.warning(
+                        "  WARNING: Chunking loop exceeded 1000 iterations!"
+                    )
+                    logger.warning(
+                        f"    current_start={current_start:,d}, audio_len={len(audio):,d}"
+                    )
                     logger.warning(f"    best_split={best_split:,d}")
                     break
 

@@ -79,9 +79,7 @@ class SessionManager:
                 logger.warning(
                     f"Path traversal attempt detected: {output_path} not under {allowed_base}"
                 )
-                raise ValueError(
-                    f"Output directory must be within {allowed_base}"
-                )
+                raise ValueError(f"Output directory must be within {allowed_base}")
 
             output_dir = output_path
         else:

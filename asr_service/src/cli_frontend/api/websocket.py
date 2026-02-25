@@ -40,7 +40,9 @@ class WSClient:
                     try:
                         message = await websocket.recv()
                         message_count += 1
-                        logger.debug(f"Received message #{message_count}: {message[:100]}...")
+                        logger.debug(
+                            f"Received message #{message_count}: {message[:100]}..."
+                        )
                         data = json.loads(message)
                         logger.debug(f"Parsed message type: {data.get('type')}")
                         await on_message(data)
@@ -64,7 +66,9 @@ class WSClient:
         finally:
             self._running = False
             self.websocket = None
-            logger.info(f"WebSocket disconnected (received {message_count} messages total)")
+            logger.info(
+                f"WebSocket disconnected (received {message_count} messages total)"
+            )
 
     def start(self, on_message: Callable) -> asyncio.Task:
         """

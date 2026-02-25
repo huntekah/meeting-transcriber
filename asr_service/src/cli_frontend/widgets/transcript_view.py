@@ -31,7 +31,9 @@ class TranscriptView(RichLog):
         Args:
             utterance: Utterance to add to transcript
         """
-        logger.info(f"TranscriptView.add_utterance called: source={utterance.source_id}, text='{utterance.text[:50]}...'")
+        logger.info(
+            f"TranscriptView.add_utterance called: source={utterance.source_id}, text='{utterance.text[:50]}...'"
+        )
 
         self.utterances.append(utterance)
         logger.debug(f"Utterance appended to list (total: {len(self.utterances)})")

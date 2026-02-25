@@ -24,9 +24,7 @@ def get_project_root() -> Path:
         if (directory / "pyproject.toml").exists():
             return directory
 
-    raise FileNotFoundError(
-        "Could not find project root (pyproject.toml not found)."
-    )
+    raise FileNotFoundError("Could not find project root (pyproject.toml not found).")
 
 
 @contextmanager

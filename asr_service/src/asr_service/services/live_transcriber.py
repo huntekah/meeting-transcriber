@@ -109,7 +109,9 @@ class LiveTranscriber:
 
                 # Double-check stop event after getting item (might have been set during wait)
                 if self._stop_event.is_set():
-                    logger.debug(f"LiveTranscriber {self.source_id} stopping, skipping segment")
+                    logger.debug(
+                        f"LiveTranscriber {self.source_id} stopping, skipping segment"
+                    )
                     break
 
                 audio_np: np.ndarray = segment["audio"]
@@ -134,7 +136,9 @@ class LiveTranscriber:
 
                 # Check again before callback (might be shutting down)
                 if self._stop_event.is_set():
-                    logger.debug(f"LiveTranscriber {self.source_id} stopping, skipping callback")
+                    logger.debug(
+                        f"LiveTranscriber {self.source_id} stopping, skipping callback"
+                    )
                     break
 
                 # Calculate timing
@@ -157,7 +161,9 @@ class LiveTranscriber:
                     self.output_callback(utterance)
                 except Exception as callback_error:
                     # Don't crash the thread if callback fails
-                    logger.error(f"Callback error for source {self.source_id}: {callback_error}")
+                    logger.error(
+                        f"Callback error for source {self.source_id}: {callback_error}"
+                    )
 
                 # Update stats
                 self._total_segments += 1
@@ -212,7 +218,10 @@ class LiveTranscriber:
                 # Suppress MLX output by redirecting stdout/stderr to os.devnull
                 # Context manager ensures proper cleanup (no leaked file descriptors)
                 with open(os.devnull, "w") as devnull:
-                    with contextlib.redirect_stdout(devnull), contextlib.redirect_stderr(devnull):
+                    with (
+                        contextlib.redirect_stdout(devnull),
+                        contextlib.redirect_stderr(devnull),
+                    ):
                         result = mlx_whisper.transcribe(
                             audio_np,
                             path_or_hf_repo=self.whisper_model_name,

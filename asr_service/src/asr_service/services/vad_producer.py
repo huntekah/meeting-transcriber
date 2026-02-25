@@ -118,7 +118,9 @@ class VADAudioProducer(AudioProducerBase):
         self._stop_event.clear()
 
         # Start VAD processing thread first (processes audio from queue)
-        self._vad_thread = threading.Thread(target=self._vad_processing_loop, daemon=True)
+        self._vad_thread = threading.Thread(
+            target=self._vad_processing_loop, daemon=True
+        )
         self._vad_thread.start()
 
         # Then start audio capture thread (feeds VAD queue)
@@ -199,7 +201,9 @@ class VADAudioProducer(AudioProducerBase):
                 self._vad_queue.put_nowait(audio_chunk)
             except queue.Full:
                 # Drop frame if queue is full (shouldn't happen with maxsize=100)
-                logger.warning(f"VAD queue full for source {self.source_id}, dropping frame")
+                logger.warning(
+                    f"VAD queue full for source {self.source_id}, dropping frame"
+                )
 
         try:
             # Open audio stream with device's actual channel count
@@ -262,7 +266,9 @@ class VADAudioProducer(AudioProducerBase):
                     if vad_prob > self.vad_threshold:
                         # Speech detected
                         if not self._is_speaking:
-                            logger.debug(f"[Source {self.source_id}] Speech START (VAD prob: {vad_prob:.3f})")
+                            logger.debug(
+                                f"[Source {self.source_id}] Speech START (VAD prob: {vad_prob:.3f})"
+                            )
                         self._is_speaking = True
                         self._silence_counter = 0
                     else:
