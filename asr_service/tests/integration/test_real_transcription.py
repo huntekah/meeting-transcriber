@@ -138,3 +138,73 @@ async def test_live_transcription_debug(loaded_models):
     # We might get empty transcription for noise, but callback should be called
     # This verifies the pipeline works
     assert True  # This test is for debugging, not strict validation
+
+
+@pytest.mark.asyncio
+async def test_long_audio_with_vad_chunking(loaded_models, tmp_path):
+    """
+    Test cold path with long audio that exercises VAD-based chunking.
+
+    CRITICAL: This test catches dtype mismatches in VAD model.
+    Previous bug: VAD expected float64 but audio was float32.
+
+    This test:
+    1. Creates synthetic audio longer than COLD_PATH_CHUNK_DURATION
+    2. Forces the VAD chunking code path
+    3. Verifies VAD receives correct dtype (float64)
+    """
+    import numpy as np
+    from asr_service.services.cold_transcriber import ColdPathPostProcessor
+    from asr_service.core.config import settings
+
+    # Create synthetic audio longer than chunk duration
+    sample_rate = 16000
+    # Make it slightly longer than chunk duration to trigger VAD chunking
+    duration_seconds = settings.COLD_PATH_CHUNK_DURATION + 60  # chunk_duration + 1 minute
+    audio_samples = int(sample_rate * duration_seconds)
+
+    # Create simple test audio: alternating speech-like patterns and silence
+    # This ensures we hit VAD branching logic
+    audio_np = np.zeros(audio_samples, dtype=np.float32)
+
+    # Add some "speech" segments (simple sine wave patterns)
+    for i in range(0, audio_samples, sample_rate * 10):  # 10-second blocks
+        # 5 seconds of "speech", 5 seconds of silence
+        segment = np.sin(2 * np.pi * 440 * np.arange(sample_rate * 5) / sample_rate) * 0.1
+        end_idx = min(i + len(segment), len(audio_np))
+        audio_np[i : end_idx] = segment[: end_idx - i]
+
+    # Save to temporary WAV file
+    test_audio_path = tmp_path / "long_test_audio.wav"
+    import soundfile as sf
+    sf.write(test_audio_path, audio_np, sample_rate)
+
+    # Get cold pipeline
+    cold_pipeline = loaded_models.get_cold_pipeline()
+    processor = ColdPathPostProcessor(cold_pipeline)
+
+    # Process long audio - this will trigger VAD chunking
+    result = processor.process_long_audio(
+        test_audio_path,
+        chunk_duration=settings.COLD_PATH_CHUNK_DURATION,
+    )
+
+    # Verify results
+    assert result is not None, "process_long_audio returned None"
+    assert "segments" in result, "Result missing 'segments' key"
+    assert "duration" in result, "Result missing 'duration' key"
+    assert "language" in result, "Result missing 'language' key"
+
+    # Verify audio was processed (duration should match input)
+    assert abs(result["duration"] - duration_seconds) < 1.0, (
+        f"Duration mismatch: expected ~{duration_seconds}s, got {result['duration']:.2f}s"
+    )
+
+    print(f"\n=== Long Audio Test Results ===")
+    print(f"Input duration: {duration_seconds:.2f}s")
+    print(f"Output duration: {result['duration']:.2f}s")
+    print(f"Segments: {len(result['segments'])}")
+    if result['segments']:
+        total_text = " ".join(seg["text"].strip() for seg in result["segments"])
+        print(f"Transcription length: {len(total_text)} chars")
+    print("✓ VAD chunking executed without dtype errors")
