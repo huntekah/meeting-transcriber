@@ -69,7 +69,12 @@ class ActiveSession:
         self.session_id = session_id
         self.sources = sources
         self.model_manager = model_manager
-        self.output_dir = Path(output_dir)
+
+        # Create timestamped subdirectory (YYYY-MM-DD-HH-MM)
+        base_output_dir = Path(output_dir).expanduser().resolve()
+        timestamp = datetime.now().strftime("%Y-%m-%d-%H-%M")
+        self.output_dir = base_output_dir / timestamp
+        self.base_output_dir = base_output_dir
 
         # State machine
         self.state = SessionState.INITIALIZING
@@ -94,13 +99,14 @@ class ActiveSession:
         self.live_transcript: Optional[List[Utterance]] = None
         self.final_transcript: Optional[ColdTranscriptResult] = None
         self.audio_path: Optional[Path] = None
+        self.transcript_path: Optional[Path] = None
 
         # Ensure output directory exists
         self.output_dir.mkdir(parents=True, exist_ok=True)
 
         logger.info(
             f"Session {session_id} initialized with {len(sources)} sources "
-            f"(output: {output_dir})"
+            f"(output: {self.output_dir})"
         )
 
     async def initialize(self):
@@ -271,6 +277,9 @@ class ActiveSession:
             f"Cold path complete: {len(self.final_transcript.segments)} segments, "
             f"{self.final_transcript.duration:.2f}s"
         )
+
+        # Save transcript to JSON file
+        self._save_transcript()
 
         # Broadcast final transcript
         await self._broadcast_message(
@@ -464,6 +473,32 @@ class ActiveSession:
             utterances=self.live_transcript or [],
             audio_file_path=str(self.audio_path) if self.audio_path else None,
         )
+
+    def _save_transcript(self):
+        """
+        Save final cold path transcript to JSON file.
+
+        Saves the final transcript result to a JSON file in the session directory.
+        """
+        if not self.final_transcript:
+            logger.warning(f"Session {self.session_id}: No final transcript to save")
+            return
+
+        try:
+            self.transcript_path = self.output_dir / "transcript.json"
+            transcript_data = self.final_transcript.model_dump(mode="json")
+
+            self.transcript_path.write_text(
+                __import__("json").dumps(transcript_data, indent=2, default=str)
+            )
+            logger.info(
+                f"Session {self.session_id}: Transcript saved to {self.transcript_path}"
+            )
+        except Exception as e:
+            logger.error(
+                f"Session {self.session_id}: Failed to save transcript: {e}",
+                exc_info=True,
+            )
 
     def get_stats(self) -> Dict[str, Any]:
         """

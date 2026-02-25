@@ -123,17 +123,31 @@ class ScreenCaptureAudioProducer(AudioProducerBase):
             logger.info(f"ScreenCaptureKit subprocess started (PID: {self._process.pid})")
         except Exception as e:
             logger.error(f"Failed to start ScreenCaptureKit subprocess: {e}")
+            self._process = None
             raise
 
         # Start read thread
-        self._stop_event.clear()
-        self._read_thread = threading.Thread(
-            target=self._read_loop,
-            name=f"ScreenCaptureRead-{self.source_id}",
-            daemon=False,
-        )
-        self._read_thread.start()
-        logger.info(f"ScreenCaptureAudioProducer {self.source_id} started")
+        try:
+            self._stop_event.clear()
+            self._read_thread = threading.Thread(
+                target=self._read_loop,
+                name=f"ScreenCaptureRead-{self.source_id}",
+                daemon=False,
+            )
+            self._read_thread.start()
+            logger.info(f"ScreenCaptureAudioProducer {self.source_id} started")
+        except Exception as e:
+            # Thread start failed - cleanup the subprocess
+            logger.error(f"Failed to start read thread: {e}", exc_info=True)
+            if self._process:
+                self._process.terminate()
+                try:
+                    self._process.wait(timeout=2.0)
+                except subprocess.TimeoutExpired:
+                    self._process.kill()
+                    self._process.wait()
+                self._process = None
+            raise
 
     def stop(self) -> None:
         """

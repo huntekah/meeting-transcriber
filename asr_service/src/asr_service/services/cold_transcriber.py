@@ -6,6 +6,8 @@ Handles long audio by splitting on silence boundaries.
 """
 
 import sys
+import tempfile
+import uuid
 from pathlib import Path
 from typing import Dict, Any, List, Tuple
 import numpy as np
@@ -15,6 +17,7 @@ import torch
 from ..core.config import settings
 from ..core.logging import logger
 from ..core.exceptions import TranscriptionError
+from ..utils.file_ops import get_project_root
 
 
 class ColdPathPostProcessor:
@@ -46,7 +49,13 @@ class ColdPathPostProcessor:
         logger.info("Lazy-loading cold path pipeline...")
 
         # Add scripts directory to path
-        scripts_dir = Path(__file__).parent.parent.parent.parent.parent / "scripts"
+        try:
+            repo_root = get_project_root()
+            scripts_dir = repo_root / "scripts"
+        except FileNotFoundError:
+            logger.warning("Could not find project root, using relative path")
+            scripts_dir = Path("scripts")
+
         if str(scripts_dir) not in sys.path:
             sys.path.insert(0, str(scripts_dir))
 
@@ -131,46 +140,54 @@ class ColdPathPostProcessor:
 
         logger.info(f"Split into {len(chunks)} chunks")
 
-        # Process each chunk
+        # Process each chunk using secure temporary directory
         all_segments = []
-        for chunk_idx, (start_sample, end_sample) in enumerate(chunks):
-            logger.info(
-                f"Processing chunk {chunk_idx + 1}/{len(chunks)} "
-                f"({start_sample / sr:.1f}s - {end_sample / sr:.1f}s)"
-            )
-
-            # Extract chunk
-            chunk_audio = audio[start_sample:end_sample]
-            chunk_offset = start_sample / sr
-
-            # Save temporary chunk file
-            chunk_path = audio_path.parent / f"{audio_path.stem}_chunk_{chunk_idx}.wav"
-            sf.write(chunk_path, chunk_audio, sr)
-
-            try:
-                # Process chunk (with lock for thread safety)
-                from .model_manager import ModelManager
-                with ModelManager._cold_pipeline_lock:
-                    result = self.pipeline.process(str(chunk_path))
-
-                # Adjust timestamps
-                for seg in result["segments"]:
-                    seg["start"] += chunk_offset
-                    seg["end"] += chunk_offset
-
-                all_segments.extend(result["segments"])
-
+        import shutil
+        temp_dir = tempfile.mkdtemp(prefix=f"asr_chunks_{uuid.uuid4().hex[:8]}_")
+        try:
+            for chunk_idx, (start_sample, end_sample) in enumerate(chunks):
                 logger.info(
-                    f"Chunk {chunk_idx + 1} done ({len(result['segments'])} segments)"
+                    f"Processing chunk {chunk_idx + 1}/{len(chunks)} "
+                    f"({start_sample / sr:.1f}s - {end_sample / sr:.1f}s)"
                 )
 
-            except Exception as e:
-                logger.error(f"Chunk {chunk_idx + 1} failed: {e}", exc_info=True)
-                raise TranscriptionError(f"Chunk {chunk_idx + 1} failed: {e}")
+                # Extract chunk
+                chunk_audio = audio[start_sample:end_sample]
+                chunk_offset = start_sample / sr
 
-            finally:
-                # Cleanup temp file
-                chunk_path.unlink(missing_ok=True)
+                # Save temporary chunk file with UUID-based name for security
+                chunk_path = Path(temp_dir) / f"chunk_{uuid.uuid4().hex}.wav"
+                sf.write(str(chunk_path), chunk_audio, sr)
+
+                try:
+                    # Process chunk (with lock for thread safety)
+                    from .model_manager import ModelManager
+                    with ModelManager._cold_pipeline_lock:
+                        result = self.pipeline.process(str(chunk_path))
+
+                    # Adjust timestamps
+                    for seg in result["segments"]:
+                        seg["start"] += chunk_offset
+                        seg["end"] += chunk_offset
+
+                    all_segments.extend(result["segments"])
+
+                    logger.info(
+                        f"Chunk {chunk_idx + 1} done ({len(result['segments'])} segments)"
+                    )
+
+                except Exception as e:
+                    logger.error(f"Chunk {chunk_idx + 1} failed: {e}", exc_info=True)
+                    raise TranscriptionError(f"Chunk {chunk_idx + 1} failed: {e}")
+
+                finally:
+                    # Cleanup temp file
+                    chunk_path.unlink(missing_ok=True)
+
+        finally:
+            # Cleanup temporary directory
+            shutil.rmtree(temp_dir, ignore_errors=True)
+            logger.debug(f"Cleaned up temporary chunk directory: {temp_dir}")
 
         logger.info(
             f"Cold path processing complete ({len(all_segments)} total segments)"

@@ -15,6 +15,7 @@ import torch
 from ..core.config import settings
 from ..core.logging import logger
 from ..core.exceptions import ModelLoadingError
+from ..utils.file_ops import get_project_root
 
 
 class ModelManager:
@@ -154,7 +155,13 @@ class ModelManager:
 
         try:
             # Add scripts directory to path
-            scripts_dir = Path(__file__).parent.parent.parent.parent / "scripts"
+            try:
+                repo_root = get_project_root()
+                scripts_dir = repo_root / "scripts"
+            except FileNotFoundError:
+                logger.warning("Could not find project root, using relative path")
+                scripts_dir = Path("scripts")
+
             if str(scripts_dir) not in sys.path:
                 sys.path.insert(0, str(scripts_dir))
 

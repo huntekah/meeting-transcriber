@@ -8,13 +8,22 @@ from pathlib import Path
 from typing import List
 from pydantic_settings import BaseSettings
 from pydantic import ConfigDict
+from ..utils.file_ops import get_project_root
+
+# Compute .env file path using project root utility
+try:
+    _PROJECT_ROOT = get_project_root()
+    _ENV_FILE = _PROJECT_ROOT / ".env"
+except FileNotFoundError:
+    # Fallback if project root not found
+    _ENV_FILE = Path(__file__).parent.parent.parent.parent / ".env"
 
 
 class Settings(BaseSettings):
     """Application configuration settings loaded from environment."""
 
     model_config = ConfigDict(
-        env_file=Path(__file__).parent.parent.parent.parent / ".env",
+        env_file=_ENV_FILE,
         case_sensitive=True,
         extra="ignore",  # Allow extra fields in .env
     )

@@ -67,8 +67,23 @@ class SessionManager:
 
         # Use default output dir if not specified
         if output_dir:
-            # Expand tilde to home directory
-            output_dir = Path(output_dir).expanduser()
+            # Expand tilde to home directory and resolve to absolute path
+            output_path = Path(output_dir).expanduser().resolve()
+            allowed_base = settings.OUTPUT_DIR.resolve()
+
+            # Security: Validate that the output directory is within allowed base path
+            # This prevents path traversal attacks (e.g., ../../../etc/passwd)
+            try:
+                output_path.relative_to(allowed_base)
+            except ValueError:
+                logger.warning(
+                    f"Path traversal attempt detected: {output_path} not under {allowed_base}"
+                )
+                raise ValueError(
+                    f"Output directory must be within {allowed_base}"
+                )
+
+            output_dir = output_path
         else:
             output_dir = settings.OUTPUT_DIR
 
@@ -162,14 +177,17 @@ class SessionManager:
         async with self._sessions_lock:
             return dict(self._sessions)
 
-    def get_stats(self) -> dict:
+    async def get_stats(self) -> dict:
         """
         Get session manager statistics.
+
+        Thread-safe: Acquires lock while reading session dictionary.
 
         Returns:
             Dictionary with statistics
         """
-        return {
-            "total_sessions": len(self._sessions),
-            "session_ids": list(self._sessions.keys()),
-        }
+        async with self._sessions_lock:
+            return {
+                "total_sessions": len(self._sessions),
+                "session_ids": list(self._sessions.keys()),
+            }

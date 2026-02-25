@@ -10,6 +10,7 @@ import threading
 import queue
 import contextlib
 import os
+import subprocess
 from typing import Callable, Dict, Any
 import numpy as np
 
@@ -209,25 +210,29 @@ class LiveTranscriber:
 
             # CRITICAL: Serialize MLX calls across all sources to prevent threading issues
             with _MLX_WHISPER_LOCK:
-                # Suppress MLX output
-                with (
-                    contextlib.redirect_stdout(open(os.devnull, "w")),
-                    contextlib.redirect_stderr(open(os.devnull, "w")),
-                ):
-                    result = mlx_whisper.transcribe(
-                        audio_np,
-                        path_or_hf_repo=self.whisper_model_name,
-                        language=self.language,
-                        # CRITICAL: No initial_prompt for MLX (causes hallucinations)
-                        condition_on_previous_text=False,
-                        # Anti-hallucination settings
-                        temperature=0.0,  # Greedy decoding only
-                        compression_ratio_threshold=2.4,
-                        logprob_threshold=-1.0,
-                        no_speech_threshold=0.6,
-                        word_timestamps=False,
-                        verbose=False,
-                    )
+                # Suppress MLX output by redirecting stdout/stderr to DEVNULL
+                # Use file descriptors directly to avoid file handle leaks
+                stdout_file = open(subprocess.DEVNULL, "w")
+                stderr_file = open(subprocess.DEVNULL, "w")
+                try:
+                    with contextlib.redirect_stdout(stdout_file), contextlib.redirect_stderr(stderr_file):
+                        result = mlx_whisper.transcribe(
+                            audio_np,
+                            path_or_hf_repo=self.whisper_model_name,
+                            language=self.language,
+                            # CRITICAL: No initial_prompt for MLX (causes hallucinations)
+                            condition_on_previous_text=False,
+                            # Anti-hallucination settings
+                            temperature=0.0,  # Greedy decoding only
+                            compression_ratio_threshold=2.4,
+                            logprob_threshold=-1.0,
+                            no_speech_threshold=0.6,
+                            word_timestamps=False,
+                            verbose=False,
+                        )
+                finally:
+                    stdout_file.close()
+                    stderr_file.close()
 
             # Extract text from segments
             segments = result.get("segments", [])
