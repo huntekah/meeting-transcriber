@@ -36,6 +36,7 @@ class ScreenCaptureAudioProducer(AudioProducerBase):
         output_queue: queue.Queue,
         sample_rate: int = 16000,
         segment_duration: float = 1.0,
+        capture_duration_seconds: int | None = None,
         binary_path: str | Path | None = None,
     ):
         """
@@ -47,6 +48,7 @@ class ScreenCaptureAudioProducer(AudioProducerBase):
             output_queue: Queue to push finalized audio segments
             sample_rate: Sample rate in Hz (default 16000)
             segment_duration: Duration in seconds to buffer before pushing segment (default 1.0s)
+            capture_duration_seconds: Max duration passed to screencapture binary (default from settings)
             binary_path: Path to compiled screencapture_audio binary
                         (default: scripts/screencapture_audio)
         """
@@ -71,10 +73,16 @@ class ScreenCaptureAudioProducer(AudioProducerBase):
         # Capture parameters
         self.segment_duration = segment_duration
         self.segment_samples = int(sample_rate * segment_duration)
+        self.capture_duration_seconds = (
+            capture_duration_seconds
+            if capture_duration_seconds is not None
+            else settings.SCREENCAPTURE_MAX_DURATION_SECONDS
+        )
 
         # Thread management
         self._process: subprocess.Popen | None = None
         self._read_thread: threading.Thread | None = None
+        self._stderr_thread: threading.Thread | None = None
         self._stop_event = threading.Event()
 
         # Audio recording for final save
@@ -115,7 +123,11 @@ class ScreenCaptureAudioProducer(AudioProducerBase):
         # Spawn subprocess
         try:
             self._process = subprocess.Popen(
-                [str(self.binary_path), str(self.sample_rate)],
+                [
+                    str(self.binary_path),
+                    str(self.sample_rate),
+                    str(self.capture_duration_seconds),
+                ],
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
                 bufsize=0,  # Unbuffered
@@ -135,6 +147,12 @@ class ScreenCaptureAudioProducer(AudioProducerBase):
                 daemon=False,
             )
             self._read_thread.start()
+            self._stderr_thread = threading.Thread(
+                target=self._stderr_loop,
+                name=f"ScreenCaptureStderr-{self.source_id}",
+                daemon=False,
+            )
+            self._stderr_thread.start()
             logger.info(f"ScreenCaptureAudioProducer {self.source_id} started")
         except Exception as e:
             # Thread start failed - cleanup the subprocess
@@ -183,6 +201,13 @@ class ScreenCaptureAudioProducer(AudioProducerBase):
                     f"Read thread for source {self.source_id} still alive after timeout"
                 )
             self._read_thread = None
+        if self._stderr_thread is not None:
+            self._stderr_thread.join(timeout=3.0)
+            if self._stderr_thread.is_alive():
+                logger.warning(
+                    f"Stderr thread for source {self.source_id} still alive after timeout"
+                )
+            self._stderr_thread = None
 
         logger.info(
             f"ScreenCaptureAudioProducer {self.source_id} stopped "
@@ -213,10 +238,17 @@ class ScreenCaptureAudioProducer(AudioProducerBase):
 
                     if not chunk_bytes:
                         # EOF - process finished
-                        logger.debug(
-                            f"EOF reached for source {self.source_id}, "
-                            f"finalizing {len(buffer)} remaining samples"
-                        )
+                        if self._stop_event.is_set():
+                            logger.debug(
+                                f"EOF reached for source {self.source_id} after stop request, "
+                                f"finalizing {len(buffer)} remaining samples"
+                            )
+                        else:
+                            returncode = self._process.poll()
+                            logger.warning(
+                                f"ScreenCaptureKit subprocess exited unexpectedly "
+                                f"(source {self.source_id}, code={returncode})"
+                            )
                         # Push any remaining audio
                         if len(buffer) > 0:
                             self._push_segment(buffer)
@@ -242,6 +274,28 @@ class ScreenCaptureAudioProducer(AudioProducerBase):
         finally:
             logger.debug(f"Read loop exited for source {self.source_id}")
 
+    def _stderr_loop(self):
+        """
+        Read stderr from subprocess and log ScreenCaptureKit output.
+        """
+        if self._process is None or self._process.stderr is None:
+            logger.error(f"Invalid stderr pipe for source {self.source_id}")
+            return
+
+        for raw_line in iter(self._process.stderr.readline, b""):
+            if not raw_line:
+                break
+            line = raw_line.decode("utf-8", errors="replace").strip()
+            if not line:
+                continue
+            if line.startswith("ERROR"):
+                logger.error(f"ScreenCaptureKit[{self.source_id}] {line}")
+            elif line.startswith("INFO"):
+                logger.info(f"ScreenCaptureKit[{self.source_id}] {line}")
+            else:
+                logger.warning(f"ScreenCaptureKit[{self.source_id}] {line}")
+
+        logger.debug(f"Stderr loop exited for source {self.source_id}")
     def _push_segment(self, audio_data: np.ndarray):
         """
         Push audio segment to output queue.
