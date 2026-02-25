@@ -101,9 +101,6 @@ class ActiveSession:
         self.audio_path: Optional[Path] = None
         self.transcript_path: Optional[Path] = None
 
-        # Ensure output directory exists
-        self.output_dir.mkdir(parents=True, exist_ok=True)
-
         logger.info(
             f"Session {session_id} initialized with {len(sources)} sources "
             f"(output: {self.output_dir})"
@@ -203,6 +200,9 @@ class ActiveSession:
             logger.info("Collecting audio from sources...")
             audio_sources = [p.get_audio() for p in self.pipelines]
 
+            # Ensure output directory exists only when saving outputs
+            self.output_dir.mkdir(parents=True, exist_ok=True)
+
             # Mix and save
             logger.info("Mixing audio to mono...")
             mixed_path = self.output_dir / f"{self.session_id}_mixed.wav"
@@ -230,7 +230,21 @@ class ActiveSession:
         except Exception as e:
             logger.error(f"Session {self.session_id} stop failed: {e}", exc_info=True)
             self._set_state(SessionState.FAILED)
+            self._cleanup_empty_output_dir()
             raise
+
+    def _cleanup_empty_output_dir(self):
+        """Remove output directory if it exists and is empty."""
+        try:
+            if self.output_dir.exists() and not any(self.output_dir.iterdir()):
+                self.output_dir.rmdir()
+                logger.info(
+                    f"Session {self.session_id}: Removed empty output directory {self.output_dir}"
+                )
+        except Exception as e:
+            logger.warning(
+                f"Session {self.session_id}: Failed to remove empty output directory: {e}"
+            )
 
     async def _run_cold_path_background(self):
         """

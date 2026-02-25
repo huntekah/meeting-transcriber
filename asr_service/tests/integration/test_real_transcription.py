@@ -200,6 +200,12 @@ async def test_long_audio_with_vad_chunking(loaded_models, tmp_path):
         f"Duration mismatch: expected ~{duration_seconds}s, got {result['duration']:.2f}s"
     )
 
+    # If global diarization is enabled and token available, verify speakers are assigned
+    if settings.GLOBAL_DIARIZATION_ENABLED and settings.HF_TOKEN:
+        speakers = {seg.get("speaker") for seg in result["segments"] if seg.get("speaker")}
+        for speaker in speakers:
+            assert speaker.startswith("SPEAKER_"), f"Invalid speaker label: {speaker}"
+
     print(f"\n=== Long Audio Test Results ===")
     print(f"Input duration: {duration_seconds:.2f}s")
     print(f"Output duration: {result['duration']:.2f}s")

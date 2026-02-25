@@ -198,7 +198,10 @@ class ColdPathPostProcessor:
 
                     try:
                         with ModelManager._cold_pipeline_lock:
-                            result = self.pipeline.process(str(chunk_path))
+                            result = self.pipeline.process(
+                                str(chunk_path),
+                                use_diarization=False
+                            )
                     finally:
                         heartbeat_stop.set()
                         heartbeat_thread.join(timeout=1.0)
@@ -233,7 +236,22 @@ class ColdPathPostProcessor:
             f"Cold path processing complete ({len(all_segments)} total segments)"
         )
 
-        return {"segments": all_segments, "duration": duration, "language": "en"}
+        final_result = {"segments": all_segments, "language": "en"}
+
+        if settings.GLOBAL_DIARIZATION_ENABLED:
+            logger.info("Running global speaker diarization on full audio...")
+            global_start = time.time()
+            from .model_manager import ModelManager
+            with ModelManager._cold_pipeline_lock:
+                final_result = self.pipeline.align_global_speakers(
+                    audio_path,
+                    all_segments,
+                    language="en"
+                )
+            global_elapsed = time.time() - global_start
+            logger.info(f"Global diarization completed in {global_elapsed:.1f}s")
+
+        return {"segments": final_result["segments"], "duration": duration, "language": "en"}
 
     def _find_silence_chunks(
         self,

@@ -20,7 +20,7 @@ Usage:
 """
 
 from pathlib import Path
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, List
 import time
 import warnings
 import concurrent.futures
@@ -315,11 +315,63 @@ class ColdPathPipeline_MLX:
 
         return result
 
+    def align_global_speakers(
+        self,
+        audio_path: str | Path,
+        merged_segments: List[Dict[str, Any]],
+        language: str = "en"
+    ) -> Dict[str, Any]:
+        """
+        Assign globally consistent speakers by running diarization once on full audio.
+
+        Args:
+            audio_path: Full audio file path
+            merged_segments: Timestamp-adjusted segments across all chunks
+            language: Language code
+
+        Returns:
+            Segments with globally consistent speaker labels
+        """
+        diarization = self.diarize(audio_path)
+        if diarization is None:
+            return {"segments": merged_segments, "language": language}
+
+        result = {"segments": merged_segments, "language": language}
+
+        with Timer("Assigning global speakers", verbose=self.verbose):
+            try:
+                annotation = diarization.speaker_diarization
+
+                for segment in result.get("segments", []):
+                    segment_start = segment.get("start")
+                    segment_end = segment.get("end")
+                    if segment_start is None or segment_end is None:
+                        continue
+
+                    from pyannote.core import Segment as PyannoteSegment
+                    window = PyannoteSegment(segment_start, segment_end)
+                    speakers_in_window = annotation.crop(window)
+
+                    if speakers_in_window:
+                        speaker = speakers_in_window.argmax()
+                        if speaker:
+                            segment["speaker"] = speaker
+
+                if self.verbose:
+                    assigned = len([s for s in result["segments"] if "speaker" in s])
+                    print(f" (assigned {assigned} of {len(result['segments'])} segments)")
+            except Exception as e:
+                if self.verbose:
+                    print(f"Warning: Global speaker assignment failed ({e}), continuing without speakers")
+
+        return result
+
     def process(
         self,
         audio_path: str | Path,
         language: str = "en",
         use_alignment: bool = True,
+        use_diarization: bool | None = None,
         parallel: bool = True
     ) -> Dict[str, Any]:
         """
@@ -329,6 +381,7 @@ class ColdPathPipeline_MLX:
             audio_path: Path to audio file
             language: Language code
             use_alignment: Whether to use WhisperX alignment
+            use_diarization: Override diarization for this call (None uses pipeline default)
             parallel: Whether to run diarization and transcription in parallel (default: True)
 
         Returns:
@@ -341,8 +394,14 @@ class ColdPathPipeline_MLX:
             print(f"Processing: {audio_path.name}")
             print(f"{'='*60}\n")
 
+        effective_use_diarization = (
+            self.use_diarization
+            if use_diarization is None
+            else (self.use_diarization and use_diarization)
+        )
+
         # Run diarization and transcription in parallel for speed
-        if parallel and self.use_diarization:
+        if parallel and effective_use_diarization:
             with concurrent.futures.ThreadPoolExecutor(max_workers=2) as executor:
                 # Submit both tasks
                 future_transcription = executor.submit(self.transcribe, audio_path, language)
@@ -355,7 +414,7 @@ class ColdPathPipeline_MLX:
             # Sequential processing
             transcription = self.transcribe(audio_path, language)
             diarization = None
-            if self.use_diarization:
+            if effective_use_diarization:
                 diarization = self.diarize(audio_path)
 
         # Step 3: Align (if requested)
