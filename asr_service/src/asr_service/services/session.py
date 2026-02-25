@@ -278,8 +278,9 @@ class ActiveSession:
             f"{self.final_transcript.duration:.2f}s"
         )
 
-        # Save transcript to JSON file
+        # Save transcripts (JSON + Markdown)
         self._save_transcript()
+        self._save_transcript_markdown()
 
         # Broadcast final transcript
         await self._broadcast_message(
@@ -497,6 +498,59 @@ class ActiveSession:
         except Exception as e:
             logger.error(
                 f"Session {self.session_id}: Failed to save transcript: {e}",
+                exc_info=True,
+            )
+
+    def _save_transcript_markdown(self):
+        """
+        Save final cold path transcript to Markdown file.
+
+        Creates a human-readable markdown transcript with speaker labels and timestamps.
+        """
+        if not self.final_transcript:
+            logger.warning(f"Session {self.session_id}: No final transcript to save as markdown")
+            return
+
+        try:
+            markdown_path = self.output_dir / "transcript.md"
+
+            # Format: convert seconds to HH:MM:SS
+            def format_timestamp(seconds: float) -> str:
+                hours = int(seconds // 3600)
+                minutes = int((seconds % 3600) // 60)
+                secs = int(seconds % 60)
+                return f"{hours:02d}:{minutes:02d}:{secs:02d}"
+
+            # Build markdown content
+            lines = []
+
+            # Header with date
+            date_str = self.started_at.strftime("%Y-%m-%d") if self.started_at else "Unknown Date"
+            lines.append(f"# Meeting Transcript: {date_str}")
+
+            # Metadata
+            duration = self.final_transcript.duration
+            language = self.final_transcript.language
+            lines.append(f"**Duration:** {format_timestamp(duration)} | **Language:** {language}")
+            lines.append("---")
+            lines.append("## Transcript")
+
+            # Segments
+            for segment in self.final_transcript.segments:
+                timestamp = format_timestamp(segment.start)
+                speaker = segment.speaker or "UNKNOWN"
+                text = segment.text.strip()
+                if text:
+                    lines.append(f"**[{timestamp}] {speaker}:** {text}")
+
+            # Write to file
+            markdown_path.write_text("\n".join(lines))
+            logger.info(
+                f"Session {self.session_id}: Markdown transcript saved to {markdown_path}"
+            )
+        except Exception as e:
+            logger.error(
+                f"Session {self.session_id}: Failed to save markdown transcript: {e}",
                 exc_info=True,
             )
 
