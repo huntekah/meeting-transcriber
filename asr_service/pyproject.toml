@@ -27,6 +27,7 @@ dependencies = [
     "sounddevice>=0.4.6",
     "ffmpeg-python>=0.2.0",
     "mlx-whisper>=0.4.0",
+    "loguru>=0.7.0",
     "pytest>=9.0.2",
 ]
 
@@ -93,4 +94,8 @@ disable_error_code = ["misc", "attr-defined", "name-defined"]  # Ignore import a
 
 [[tool.mypy.overrides]]
 module = "logging"
+ignore_errors = true
+
+[[tool.mypy.overrides]]
+module = "loguru"
 ignore_errors = true
