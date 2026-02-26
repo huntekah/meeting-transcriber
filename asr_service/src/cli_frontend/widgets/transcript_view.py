@@ -4,6 +4,7 @@ Transcript view widget for displaying live transcription.
 Shows utterances in chronological order with source labels, timestamps, and overlap markers.
 """
 
+from textual.containers import Vertical
 from textual.widgets import RichLog, Static
 from datetime import datetime
 from cli_frontend.models import Utterance
@@ -33,36 +34,38 @@ def _format_utterance_line(utterance: Utterance, *, show_partial: bool = False) 
     )
 
 
-class LiveTranscriptView(Static):
+class LiveTranscriptView(Vertical):
     """Live, updatable view for in-progress utterances."""
 
     def __init__(self, **kwargs):
-        super().__init__("", **kwargs)
+        super().__init__(**kwargs)
         self._partials: dict[int, Utterance] = {}
+        self._lines: dict[int, Static] = {}
 
-    def update_partial(self, utterance: Utterance):
+    async def update_partial(self, utterance: Utterance):
         """Update (or add) a partial utterance for a source."""
         self._partials[utterance.source_id] = utterance
-        self._refresh_render()
+        line = self._lines.get(utterance.source_id)
+        if line is None:
+            line = Static("", classes="live_transcript_line")
+            self._lines[utterance.source_id] = line
+            await self.mount(line)
+        line.update(_format_utterance_line(utterance, show_partial=True))
+        line.display = True
 
     def clear_partial(self, source_id: int | None = None):
         """Clear one or all partial utterances."""
         if source_id is None:
             self._partials.clear()
+            for line in self._lines.values():
+                line.update("")
+                line.display = False
         else:
             self._partials.pop(source_id, None)
-        self._refresh_render()
-
-    def _refresh_render(self):
-        if not self._partials:
-            self.update("")
-            return
-
-        lines = [
-            _format_utterance_line(utterance, show_partial=True)
-            for utterance in sorted(self._partials.values(), key=lambda u: u.source_id)
-        ]
-        self.update("\n".join(lines))
+            line = self._lines.get(source_id)
+            if line:
+                line.update("")
+                line.display = False
 
 
 class TranscriptView(RichLog):

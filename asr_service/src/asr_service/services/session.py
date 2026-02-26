@@ -377,6 +377,7 @@ class ActiveSession:
             return ScreenCaptureAudioProducer(
                 source_id=source_id,
                 device_name=source_config.device_name,
+                vad_model=self.model_manager.vad_model,
                 output_queue=queue.Queue(),  # Will be overwritten by SourcePipeline
             )
         else:

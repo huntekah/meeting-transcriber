@@ -119,7 +119,7 @@ class RecordingScreen(Screen):
                     live_transcript.clear_partial(msg.data.source_id)
                     logger.info("Utterance added to transcript view")
                 elif msg.data.text.strip():
-                    live_transcript.update_partial(msg.data)
+                    await live_transcript.update_partial(msg.data)
                     logger.info("Live utterance updated")
 
             except Exception as e:

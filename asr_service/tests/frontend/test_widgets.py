@@ -4,6 +4,7 @@ Tests for CLI frontend widgets.
 Tests StatusBar, TranscriptView, and DeviceSelector widgets.
 """
 
+import pytest
 from textual.app import App, ComposeResult
 from textual.containers import Vertical
 from cli_frontend.widgets.status_bar import StatusBar
@@ -241,11 +242,10 @@ class TestDeviceSelector:
 class TestLiveTranscriptView:
     """Test LiveTranscriptView widget."""
 
-    def test_update_and_clear_partial(self):
+    @pytest.mark.asyncio
+    async def test_update_and_clear_partial(self):
         """Test updating and clearing partials."""
-        from unittest.mock import patch
-
-        view = LiveTranscriptView()
+        app = _LiveTranscriptLayoutApp()
 
         utterance = Utterance(
             source_id=0,
@@ -256,14 +256,13 @@ class TestLiveTranscriptView:
             is_final=False,
         )
 
-        with patch.object(view, "update") as mock_update:
-            view.update_partial(utterance)
+        async with app.run_test():
+            view = app.query_one("#live_transcript", LiveTranscriptView)
+            await view.update_partial(utterance)
             assert 0 in view._partials
-            mock_update.assert_called()
 
             view.clear_partial(utterance.source_id)
             assert 0 not in view._partials
-            assert mock_update.call_count >= 2
 
     async def test_layout_mount_does_not_crash(self):
         """Mount LiveTranscriptView in a layout to ensure no crash."""
