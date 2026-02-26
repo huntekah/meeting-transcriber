@@ -13,6 +13,8 @@ import numpy as np
 from ..core.logging import logger
 from ..schemas.transcription import Utterance
 from .audio_producer import AudioProducerBase
+from .vad_producer import VADAudioProducer
+from .screencapture_producer import ScreenCaptureAudioProducer
 from .live_transcriber import LiveTranscriber
 
 
@@ -54,12 +56,18 @@ class SourcePipeline:
         self.producer.output_queue = self._audio_queue
 
         # Create consumer
+        streaming_source = (
+            producer
+            if isinstance(producer, (VADAudioProducer, ScreenCaptureAudioProducer))
+            else None
+        )
         self.transcriber = LiveTranscriber(
             source_id=source_id,
             input_queue=self._audio_queue,
             output_callback=utterance_callback,
             whisper_model_name=whisper_model_name,
             language=language,
+            streaming_source=streaming_source,
         )
 
         logger.info(

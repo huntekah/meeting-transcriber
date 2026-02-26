@@ -17,11 +17,7 @@ from ..core.config import settings
 from ..core.logging import logger
 from ..core.exceptions import AudioCaptureError
 from .audio_producer import AudioProducerBase
-
-# Global lock to serialize VAD model access across all sources
-# Silero VAD is NOT thread-safe - internal RNN state gets corrupted with concurrent calls
-_VAD_MODEL_LOCK = threading.Lock()
-
+from .vad_streaming import VADStreamingBuffer
 
 class VADAudioProducer(AudioProducerBase):
     """
@@ -81,11 +77,14 @@ class VADAudioProducer(AudioProducerBase):
         self.vad_threshold = vad_threshold or settings.VAD_THRESHOLD
         self.silence_chunks = silence_chunks or settings.SILENCE_CHUNKS
 
-        # Thread-safe state
-        self._buffer_lock = threading.Lock()
-        self._growing_buffer: list[np.ndarray] = []
-        self._is_speaking = False
-        self._silence_counter = 0
+        # VAD streaming buffer
+        self._vad_stream = VADStreamingBuffer(
+            source_id=source_id,
+            sample_rate=self.sample_rate,
+            vad_model=vad_model,
+            vad_threshold=self.vad_threshold,
+            silence_chunks=self.silence_chunks,
+        )
 
         # Audio recording for final save
         self._all_audio_chunks: list[np.ndarray] = []
@@ -152,12 +151,12 @@ class VADAudioProducer(AudioProducerBase):
             self._vad_thread.join(timeout=2.0)
 
         # Finalize any remaining audio
-        with self._buffer_lock:
-            if len(self._growing_buffer) > 0:
-                logger.info(
-                    f"Finalizing {len(self._growing_buffer)} pending chunks for source {self.source_id}"
-                )
-                self._finalize_segment()
+        segment = self._vad_stream.finalize_pending()
+        if segment:
+            logger.info(
+                f"Finalizing pending chunks for source {self.source_id} on stop"
+            )
+            self._push_segment(segment)
 
         logger.info(f"VADAudioProducer {self.source_id} stopped")
 
@@ -249,46 +248,10 @@ class VADAudioProducer(AudioProducerBase):
                 except queue.Empty:
                     continue
 
-                # Append to growing buffer
-                with self._buffer_lock:
-                    self._growing_buffer.append(audio_chunk)
-
-                # Run VAD (safe to call PyTorch model from Python thread)
-                # IMPORTANT: Use global lock to serialize VAD calls across all sources
-                try:
-                    audio_tensor = torch.from_numpy(audio_chunk)
-
-                    # Serialize VAD model access - model is NOT thread-safe
-                    with _VAD_MODEL_LOCK:
-                        vad_prob = self.vad_model(audio_tensor, self.sample_rate).item()
-
-                    # VAD state machine
-                    if vad_prob > self.vad_threshold:
-                        # Speech detected
-                        if not self._is_speaking:
-                            logger.debug(
-                                f"[Source {self.source_id}] Speech START (VAD prob: {vad_prob:.3f})"
-                            )
-                        self._is_speaking = True
-                        self._silence_counter = 0
-                    else:
-                        # Silence detected
-                        if self._is_speaking:
-                            self._silence_counter += 1
-                            if self._silence_counter >= self.silence_chunks:
-                                # Enough silence - finalize segment
-                                logger.debug(
-                                    f"[Source {self.source_id}] Speech END (silence chunks: {self._silence_counter})"
-                                )
-                                with self._buffer_lock:
-                                    self._finalize_segment()
-                                self._is_speaking = False
-                                self._silence_counter = 0
-
-                except (RuntimeError, ValueError) as e:
-                    logger.error(
-                        f"VAD error for source {self.source_id}: {e}", exc_info=True
-                    )
+                # Run VAD streaming logic
+                segment = self._vad_stream.append_chunk(audio_chunk)
+                if segment:
+                    self._push_segment(segment)
 
             except (RuntimeError, ValueError) as e:
                 logger.error(
@@ -298,50 +261,20 @@ class VADAudioProducer(AudioProducerBase):
 
         logger.info(f"VAD processing thread stopped for source {self.source_id}")
 
-    def _finalize_segment(self):
-        """
-        Finalize buffered audio and push to queue for transcription.
-
-        Called when VAD detects end of speech (15 silence chunks).
-        Assumes _buffer_lock is already held.
-        """
-        if len(self._growing_buffer) == 0:
-            return
-
-        # Concatenate buffer chunks
-        audio_np = np.concatenate(self._growing_buffer)
-        self._growing_buffer.clear()
-
-        # Skip if too short
-        min_samples = int(settings.MIN_AUDIO_LENGTH * self.sample_rate)
-        if len(audio_np) < min_samples:
-            logger.debug(
-                f"Skipping short segment for source {self.source_id}: "
-                f"{len(audio_np)} samples < {min_samples}"
-            )
-            return
-
-        # Calculate timestamp
-        current_time = time.time()
-
-        # Create segment dictionary
-        segment: Dict[str, Any] = {
-            "audio": audio_np,
-            "timestamp": current_time,
-            "source_id": self.source_id,
-        }
-
-        # Push to queue (non-blocking with timeout)
+    def _push_segment(self, segment: Dict[str, Any]):
+        """Push finalized segment to output queue."""
         try:
             self.output_queue.put(segment, timeout=1.0)
             logger.debug(
                 f"Finalized segment for source {self.source_id}: "
-                f"{len(audio_np)} samples ({len(audio_np) / self.sample_rate:.2f}s)"
+                f"{len(segment['audio'])} samples "
+                f"({len(segment['audio']) / self.sample_rate:.2f}s)"
             )
         except queue.Full:
             logger.warning(
                 f"Output queue full for source {self.source_id}, dropping segment"
             )
+            self._vad_stream.clear_commit_ready()
 
     def get_full_audio(self) -> np.ndarray:
         """
@@ -361,12 +294,28 @@ class VADAudioProducer(AudioProducerBase):
         Returns:
             Dictionary with statistics
         """
+        stats = self._vad_stream.get_stats()
         return {
             "source_id": self.source_id,
             "device_name": self.device_name,
             "is_running": self._thread is not None and self._thread.is_alive(),
             "total_audio_chunks": len(self._all_audio_chunks),
-            "buffer_size": len(self._growing_buffer),
-            "is_speaking": self._is_speaking,
-            "silence_counter": self._silence_counter,
+            "buffer_size": stats["buffer_size"],
+            "is_speaking": stats["is_speaking"],
+            "silence_counter": stats["silence_counter"],
+            "commit_ready": stats["commit_ready"],
         }
+
+    def get_streaming_snapshot(self) -> Dict[str, Any]:
+        """
+        Snapshot of streaming state for provisional transcription.
+
+        Returns:
+            Dict with audio (np.ndarray | None), speech_start_time, is_speaking,
+            commit_ready, and sample_rate.
+        """
+        return self._vad_stream.get_streaming_snapshot()
+
+    def clear_commit_ready(self) -> None:
+        """Clear commit_ready after finalization is consumed."""
+        self._vad_stream.clear_commit_ready()

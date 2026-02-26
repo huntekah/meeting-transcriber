@@ -9,6 +9,7 @@ import time
 import asyncio
 import threading
 import queue
+import shutil
 from pathlib import Path
 from datetime import datetime
 from typing import List, Dict, Any, Optional
@@ -17,7 +18,7 @@ import concurrent.futures
 
 from ..core.config import settings
 from ..core.logging import logger
-from ..core.exceptions import ModelLoadingError, TranscriptionError
+from ..core.exceptions import ModelLoadingError, TranscriptionError, SessionStateError
 from ..schemas.transcription import (
     SessionState,
     Utterance,
@@ -238,6 +239,41 @@ class ActiveSession:
             self._cleanup_empty_output_dir()
             raise
 
+    async def cancel_recording(self):
+        """
+        Cancel recording and discard all outputs.
+
+        Stops pipelines without saving audio/transcripts or running cold path.
+        """
+        logger.info(f"Cancelling recording for session {self.session_id}...")
+
+        if self.state in {SessionState.PROCESSING, SessionState.COMPLETED}:
+            raise SessionStateError(
+                f"Cannot cancel session {self.session_id} in state {self.state.value}"
+            )
+
+        self._set_state(SessionState.CANCELLED)
+
+        try:
+            logger.info(f"Stopping {len(self.pipelines)} pipelines...")
+            with concurrent.futures.ThreadPoolExecutor() as executor:
+                executor.map(lambda p: p.stop(), self.pipelines)
+
+            self.live_transcript = None
+            self.final_transcript = None
+            self.audio_path = None
+            self.transcript_path = None
+            self.ended_at = datetime.now()
+
+            self._discard_output_dir()
+            logger.info(f"Session {self.session_id} cancelled successfully")
+
+        except Exception as e:
+            logger.error(
+                f"Session {self.session_id} cancel failed: {e}", exc_info=True
+            )
+            raise
+
     def _cleanup_empty_output_dir(self):
         """Remove output directory if it exists and is empty."""
         try:
@@ -249,6 +285,19 @@ class ActiveSession:
         except OSError as e:
             logger.warning(
                 f"Session {self.session_id}: Failed to remove empty output directory: {e}"
+            )
+
+    def _discard_output_dir(self):
+        """Remove session output directory and any files inside it."""
+        try:
+            if self.output_dir.exists():
+                shutil.rmtree(self.output_dir)
+                logger.info(
+                    f"Session {self.session_id}: Discarded output directory {self.output_dir}"
+                )
+        except OSError as e:
+            logger.warning(
+                f"Session {self.session_id}: Failed to discard output directory: {e}"
             )
 
     async def _run_cold_path_background(self):
@@ -328,6 +377,7 @@ class ActiveSession:
             return ScreenCaptureAudioProducer(
                 source_id=source_id,
                 device_name=source_config.device_name,
+                vad_model=self.model_manager.vad_model,
                 output_queue=queue.Queue(),  # Will be overwritten by SourcePipeline
             )
         else:

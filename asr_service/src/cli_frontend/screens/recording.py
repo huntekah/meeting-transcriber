@@ -7,8 +7,8 @@ Shows real-time transcription updates via WebSocket.
 from textual.app import ComposeResult
 from textual.screen import Screen
 from textual.containers import Vertical, Horizontal
-from textual.widgets import Header, Footer, Button
-from cli_frontend.widgets.transcript_view import TranscriptView
+from textual.widgets import Header, Footer, Button, Static
+from cli_frontend.widgets.transcript_view import TranscriptView, LiveTranscriptView
 from cli_frontend.widgets.status_bar import StatusBar
 from cli_frontend.api.client import ASRClient
 from cli_frontend.api.websocket import WSClient
@@ -22,6 +22,7 @@ class RecordingScreen(Screen):
 
     BINDINGS = [
         ("ctrl+r", "stop_recording", "Stop"),
+        ("ctrl+x", "confirm_discard", "Discard"),
         ("ctrl+q", "quit", "Quit"),
         ("escape", "stop_recording", "Stop"),
     ]
@@ -46,6 +47,7 @@ class RecordingScreen(Screen):
         self.ws_client = None
         self.state = "initializing"
         self._stopping = False
+        self._discarding = False
 
     def compose(self) -> ComposeResult:
         """Create child widgets."""
@@ -56,8 +58,16 @@ class RecordingScreen(Screen):
 
             yield TranscriptView(id="transcript")
 
+            yield LiveTranscriptView(id="live_transcript")
+
             with Horizontal(id="controls"):
-                yield Button("⏹ Stop Recording", variant="error", id="stop_btn")
+                with Horizontal(id="controls_main"):
+                    yield Button("■ Stop & Save", variant="primary", id="stop_btn")
+                    yield Button("✗ Discard", variant="default", id="discard_btn")
+                with Horizontal(id="controls_confirm", classes="hidden"):
+                    yield Static("Discard recording?", id="discard_prompt")
+                    yield Button("Yes, Delete", variant="error", id="discard_yes_btn")
+                    yield Button("No, Go Back", variant="default", id="discard_no_btn")
 
         yield Footer()
 
@@ -95,10 +105,22 @@ class RecordingScreen(Screen):
                 )
 
                 transcript = self.query_one("#transcript", TranscriptView)
+                live_transcript = self.query_one("#live_transcript", LiveTranscriptView)
                 logger.debug(f"Got TranscriptView widget: {transcript}")
 
-                transcript.add_utterance(msg.data)
-                logger.info("Utterance added to transcript view")
+                if not msg.data.is_final and msg.data.text.startswith(
+                    "[TRANSCRIPTION ERROR"
+                ):
+                    transcript.add_utterance(msg.data)
+                    live_transcript.clear_partial(msg.data.source_id)
+                    logger.info("Error utterance added to transcript view")
+                elif msg.data.is_final:
+                    transcript.add_utterance(msg.data)
+                    live_transcript.clear_partial(msg.data.source_id)
+                    logger.info("Utterance added to transcript view")
+                elif msg.data.text.strip():
+                    await live_transcript.update_partial(msg.data)
+                    logger.info("Live utterance updated")
 
             except Exception as e:
                 logger.error(f"Error processing utterance: {e}", exc_info=True)
@@ -122,6 +144,15 @@ class RecordingScreen(Screen):
                     self.set_timer(2.0, self.return_to_setup)
                 elif msg.state == "failed":
                     status_bar.set_status("❌ Failed")
+                elif msg.state == "cancelled":
+                    status_bar.set_status("✗ Discarded")
+                    self.set_timer(1.0, self.return_to_setup)
+
+                if msg.state in {"stopping", "processing", "completed", "failed", "cancelled"}:
+                    live_transcript = self.query_one(
+                        "#live_transcript", LiveTranscriptView
+                    )
+                    live_transcript.clear_partial()
 
                 logger.info(f"State changed to: {msg.state}")
 
@@ -152,10 +183,16 @@ class RecordingScreen(Screen):
         """Handle button clicks."""
         if event.button.id == "stop_btn":
             self.app.call_later(self.stop_recording)
+        elif event.button.id == "discard_btn":
+            self.confirm_discard()
+        elif event.button.id == "discard_yes_btn":
+            self.app.call_later(self.discard_recording)
+        elif event.button.id == "discard_no_btn":
+            self.cancel_discard()
 
     async def stop_recording(self):
         """Stop recording and disconnect."""
-        if self._stopping:
+        if self._stopping or self._discarding:
             return
 
         self._stopping = True
@@ -171,6 +208,46 @@ class RecordingScreen(Screen):
             self._stopping = False
             return
 
+    def confirm_discard(self):
+        """Show discard confirmation row."""
+        if self._stopping:
+            return
+        self._set_discard_confirm(True)
+
+    def cancel_discard(self):
+        """Hide discard confirmation row."""
+        self._set_discard_confirm(False)
+
+    def _set_discard_confirm(self, show: bool):
+        controls_main = self.query_one("#controls_main", Horizontal)
+        controls_confirm = self.query_one("#controls_confirm", Horizontal)
+
+        if show:
+            controls_main.add_class("hidden")
+            controls_confirm.remove_class("hidden")
+        else:
+            controls_confirm.add_class("hidden")
+            controls_main.remove_class("hidden")
+
+    async def discard_recording(self):
+        """Cancel recording and discard outputs."""
+        if self._stopping or self._discarding:
+            return
+
+        self._discarding = True
+        status_bar = self.query_one("#status_bar", StatusBar)
+        status_bar.set_status("✗ Discarding recording...")
+
+        try:
+            await self.client.cancel_session(self.session_id)
+            self.return_to_setup()
+
+        except Exception as e:
+            status_bar.set_status(f"❌ Error discarding: {e}")
+            self._discarding = False
+            self._set_discard_confirm(False)
+            return
+
     def return_to_setup(self):
         """Return to setup screen."""
         # Disconnect WebSocket
@@ -184,3 +261,7 @@ class RecordingScreen(Screen):
         """Cleanup when screen is unmounted."""
         if self.ws_client:
             self.ws_client.disconnect()
+
+    async def action_confirm_discard(self):
+        """Handle discard action via key binding."""
+        self.confirm_discard()

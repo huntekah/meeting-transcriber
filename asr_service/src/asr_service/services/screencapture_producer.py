@@ -11,12 +11,14 @@ import queue
 import time
 from typing import Dict, Any
 import numpy as np
+import torch
 from pathlib import Path
 
 from ..core.config import settings
 from ..core.logging import logger
 from ..utils.file_ops import get_project_root
 from .audio_producer import AudioProducerBase
+from .vad_streaming import VADStreamingBuffer
 
 
 class ScreenCaptureAudioProducer(AudioProducerBase):
@@ -34,6 +36,7 @@ class ScreenCaptureAudioProducer(AudioProducerBase):
         source_id: int,
         device_name: str,
         output_queue: queue.Queue,
+        vad_model: torch.nn.Module,
         sample_rate: int = 16000,
         segment_duration: float = 1.0,
         capture_duration_seconds: int | None = None,
@@ -46,6 +49,7 @@ class ScreenCaptureAudioProducer(AudioProducerBase):
             source_id: Unique source identifier
             device_name: Human-readable device name (e.g., "System Audio (ScreenCaptureKit)")
             output_queue: Queue to push finalized audio segments
+            vad_model: Silero VAD model
             sample_rate: Sample rate in Hz (default 16000)
             segment_duration: Duration in seconds to buffer before pushing segment (default 1.0s)
             capture_duration_seconds: Max duration passed to screencapture binary (default from settings)
@@ -78,6 +82,14 @@ class ScreenCaptureAudioProducer(AudioProducerBase):
             if capture_duration_seconds is not None
             else settings.SCREENCAPTURE_MAX_DURATION_SECONDS
         )
+
+        # VAD streaming buffer
+        self._vad_stream = VADStreamingBuffer(
+            source_id=source_id,
+            sample_rate=self.sample_rate,
+            vad_model=vad_model,
+        )
+        self._vad_chunk_buffer = np.array([], dtype=np.float32)
 
         # Thread management
         self._process: subprocess.Popen | None = None
@@ -211,6 +223,10 @@ class ScreenCaptureAudioProducer(AudioProducerBase):
                 )
             self._stderr_thread = None
 
+        segment = self._vad_stream.finalize_pending()
+        if segment:
+            self._push_segment(segment)
+
         logger.info(
             f"ScreenCaptureAudioProducer {self.source_id} stopped "
             f"({self._total_segments_captured} segments, {self._total_samples_captured} samples)"
@@ -230,7 +246,6 @@ class ScreenCaptureAudioProducer(AudioProducerBase):
                 logger.error(f"Invalid subprocess for source {self.source_id}")
                 return
 
-            buffer = np.array([], dtype=np.float32)
             while not self._stop_event.is_set():
                 try:
                     # Read chunk from stdout
@@ -250,19 +265,28 @@ class ScreenCaptureAudioProducer(AudioProducerBase):
                                 f"(source {self.source_id}, code={returncode})"
                             )
                         # Push any remaining audio
-                        if len(buffer) > 0:
-                            self._push_segment(buffer)
+                        segment = self._vad_stream.finalize_pending()
+                        if segment:
+                            self._push_segment(segment)
                         break
 
                     # Convert bytes to float32 array
                     chunk_data = np.frombuffer(chunk_bytes, dtype=np.float32)
-                    buffer = np.concatenate([buffer, chunk_data])
+                    with self._buffer_lock:
+                        self._all_audio_chunks.append(chunk_data)
 
-                    # Push segment if we have enough audio
-                    while len(buffer) >= self.segment_samples:
-                        segment_audio = buffer[: self.segment_samples]
-                        buffer = buffer[self.segment_samples :]
-                        self._push_segment(segment_audio)
+                    self._vad_chunk_buffer = np.concatenate(
+                        [self._vad_chunk_buffer, chunk_data]
+                    )
+
+                    while len(self._vad_chunk_buffer) >= settings.CHUNK_SIZE:
+                        vad_chunk = self._vad_chunk_buffer[: settings.CHUNK_SIZE]
+                        self._vad_chunk_buffer = self._vad_chunk_buffer[
+                            settings.CHUNK_SIZE :
+                        ]
+                        segment = self._vad_stream.append_chunk(vad_chunk)
+                        if segment:
+                            self._push_segment(segment)
 
                 except (OSError, RuntimeError, ValueError) as e:
                     logger.error(
@@ -297,32 +321,22 @@ class ScreenCaptureAudioProducer(AudioProducerBase):
 
         logger.debug(f"Stderr loop exited for source {self.source_id}")
 
-    def _push_segment(self, audio_data: np.ndarray):
+    def _push_segment(self, segment: Dict[str, Any]):
         """
         Push audio segment to output queue.
 
         Args:
-            audio_data: Numpy array of audio samples (float32)
+            segment: Segment dictionary with audio and metadata
         """
+        audio_data = segment.get("audio")
         if audio_data is None or len(audio_data) == 0:
             return
-
-        current_time = time.time()
-
-        # Create segment dictionary (same format as VADAudioProducer)
-        segment: Dict[str, Any] = {
-            "audio": audio_data,
-            "timestamp": current_time,
-            "source_id": self.source_id,
-        }
 
         # Push to queue (non-blocking with timeout)
         try:
             self.output_queue.put(segment, timeout=1.0)
-            with self._buffer_lock:
-                self._all_audio_chunks.append(audio_data)
-                self._total_segments_captured += 1
-                self._total_samples_captured += len(audio_data)
+            self._total_segments_captured += 1
+            self._total_samples_captured += len(audio_data)
             logger.debug(
                 f"Pushed segment for source {self.source_id}: "
                 f"{len(audio_data)} samples ({len(audio_data) / self.sample_rate:.2f}s)"
@@ -331,6 +345,7 @@ class ScreenCaptureAudioProducer(AudioProducerBase):
             logger.warning(
                 f"Output queue full for source {self.source_id}, dropping segment"
             )
+            self._vad_stream.clear_commit_ready()
 
     def get_full_audio(self) -> np.ndarray:
         """
@@ -351,14 +366,24 @@ class ScreenCaptureAudioProducer(AudioProducerBase):
         Returns:
             Dictionary with statistics
         """
-        with self._buffer_lock:
-            return {
-                "source_id": self.source_id,
-                "device_name": self.device_name,
-                "device_type": "screencapture",
-                "is_running": self._process is not None
-                and self._process.poll() is None,
-                "total_segments": self._total_segments_captured,
-                "total_samples": self._total_samples_captured,
-                "binary_path": str(self.binary_path),
-            }
+        stats = self._vad_stream.get_stats()
+        return {
+            "source_id": self.source_id,
+            "device_name": self.device_name,
+            "device_type": "screencapture",
+            "is_running": self._process is not None and self._process.poll() is None,
+            "total_segments": self._total_segments_captured,
+            "total_samples": self._total_samples_captured,
+            "binary_path": str(self.binary_path),
+            "buffer_size": stats["buffer_size"],
+            "is_speaking": stats["is_speaking"],
+            "commit_ready": stats["commit_ready"],
+        }
+
+    def get_streaming_snapshot(self) -> Dict[str, Any]:
+        """Snapshot of streaming state for provisional transcription."""
+        return self._vad_stream.get_streaming_snapshot()
+
+    def clear_commit_ready(self) -> None:
+        """Clear commit_ready after finalization is consumed."""
+        self._vad_stream.clear_commit_ready()

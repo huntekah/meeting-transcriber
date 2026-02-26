@@ -45,6 +45,7 @@ class Settings(BaseSettings):
     VAD_THRESHOLD: float = 0.5  # Speech probability threshold
     SILENCE_CHUNKS: int = 15  # ~480ms silence triggers finalization
     MIN_AUDIO_LENGTH: float = 0.5  # Minimum seconds before transcription
+    PROVISIONAL_INTERVAL: float = 0.2  # Seconds between provisional updates
     SCREENCAPTURE_MAX_DURATION_SECONDS: int = 86400  # 24 hours
 
     # Cold path settings

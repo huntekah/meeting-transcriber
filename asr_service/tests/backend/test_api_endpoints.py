@@ -177,6 +177,28 @@ class TestSessionEndpoints:
             mock_session.stop_recording.assert_called_once()
 
     @pytest.mark.asyncio
+    async def test_cancel_session(self, async_client: AsyncClient):
+        """Test POST /api/v1/sessions/{id}/cancel discards recording."""
+        with patch(
+            "asr_service.services.session_manager.SessionManager.get_session"
+        ) as mock_get, patch(
+            "asr_service.services.session_manager.SessionManager.delete_session"
+        ) as mock_delete:
+            mock_session = AsyncMock()
+            mock_session.session_id = "test-123"
+            mock_session.state.value = "cancelled"
+            mock_get.return_value = mock_session
+
+            response = await async_client.post("/api/v1/sessions/test-123/cancel")
+
+            assert response.status_code == 200
+            data = response.json()
+            assert data["session_id"] == "test-123"
+            assert data["state"] == "cancelled"
+            mock_session.cancel_recording.assert_called_once()
+            mock_delete.assert_called_once_with("test-123")
+
+    @pytest.mark.asyncio
     async def test_delete_session(self, async_client: AsyncClient):
         """Test DELETE /api/v1/sessions/{id} removes session."""
         with patch("asr_service.services.session_manager.SessionManager.delete_session") as mock_delete:

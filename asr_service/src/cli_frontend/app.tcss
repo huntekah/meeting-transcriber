@@ -57,6 +57,12 @@ Screen {
     text-style: bold;
 }
 
+#live_transcript {
+    height: auto;
+    margin: 0 1 1 1;
+    color: $text-muted;
+}
+
 #transcript {
     height: 1fr;
     border: solid $primary;
@@ -68,6 +74,38 @@ Screen {
     height: 3;
     align: center middle;
     background: $surface;
+}
+
+#controls_main, #controls_confirm {
+    align: center middle;
+    height: 3;
+}
+
+#controls_confirm {
+    width: 100%;
+}
+
+#discard_prompt {
+    width: auto;
+    margin-right: 1;
+}
+
+#controls_confirm Button {
+    margin-left: 1;
+}
+
+#discard_btn {
+    background: #2a2a2a;
+    color: #e0e0e0;
+}
+
+#discard_btn:hover, #discard_btn:focus {
+    background: $accent;
+    color: $text;
+}
+
+.hidden {
+    display: none;
 }
 
 /* Settings modal styles */

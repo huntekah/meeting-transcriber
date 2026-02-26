@@ -104,6 +104,32 @@ async def stop_session(
         )
 
 
+@router.post("/sessions/{session_id}/cancel", tags=["sessions"])
+async def cancel_session(
+    session_id: str,
+    session_manager: SessionManager = Depends(get_session_manager),
+):
+    """
+    Cancel recording session and discard outputs.
+
+    Stops all audio pipelines without saving audio/transcripts.
+    """
+    try:
+        session = await session_manager.get_session(session_id)
+        await session.cancel_recording()
+        await session_manager.delete_session(session_id)
+
+        return {"session_id": session.session_id, "state": session.state.value}
+
+    except SessionNotFoundError as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+    except Exception as e:
+        logger.error(f"Session cancel failed: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e)
+        )
+
+
 @router.get(
     "/sessions/{session_id}", response_model=TranscriptDocument, tags=["sessions"]
 )

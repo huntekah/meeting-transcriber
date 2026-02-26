@@ -10,7 +10,7 @@ import threading
 import queue
 import contextlib
 import os
-from typing import Callable, Dict, Any
+from typing import Callable, Dict, Any, Protocol
 import numpy as np
 
 from ..core.config import settings
@@ -21,6 +21,18 @@ from ..schemas.transcription import Utterance
 # Global lock to serialize MLX Whisper calls across all sources
 # MLX might not be fully thread-safe for concurrent transcriptions
 _MLX_WHISPER_LOCK = threading.Lock()
+
+
+class StreamingSource(Protocol):
+    """Minimal interface for producers that support streaming snapshots."""
+
+    sample_rate: int
+
+    def get_streaming_snapshot(self) -> Dict[str, Any]:
+        ...
+
+    def clear_commit_ready(self) -> None:
+        ...
 
 
 class LiveTranscriber:
@@ -40,6 +52,7 @@ class LiveTranscriber:
         output_callback: Callable[[Utterance], None],
         whisper_model_name: str | None = None,
         language: str = "en",
+        streaming_source: "StreamingSource | None" = None,
     ):
         """
         Initialize live transcriber.
@@ -56,6 +69,7 @@ class LiveTranscriber:
         self.output_callback = output_callback
         self.whisper_model_name = whisper_model_name or settings.MLX_WHISPER_MODEL
         self.language = language
+        self.streaming_source = streaming_source
 
         # Thread lifecycle
         self._thread: threading.Thread | None = None
@@ -65,6 +79,8 @@ class LiveTranscriber:
         self._total_segments = 0
         self._total_inference_time = 0.0
         self._error_count = 0
+        self._last_provisional_text = ""
+        self._last_provisional_time = 0.0
 
     def start(self):
         """Start consumer thread."""
@@ -102,102 +118,166 @@ class LiveTranscriber:
 
         Reads segments from queue and transcribes them.
         """
+        if self.streaming_source is None:
+            self._final_only_loop()
+        else:
+            self._streaming_loop()
+
+    def _final_only_loop(self):
+        """Inference loop for producers without streaming state."""
         while not self._stop_event.is_set():
             try:
-                # Get audio segment from queue (timeout to check stop_event)
                 segment = self.input_queue.get(timeout=0.5)
-
-                # Double-check stop event after getting item (might have been set during wait)
-                if self._stop_event.is_set():
-                    logger.debug(
-                        f"LiveTranscriber {self.source_id} stopping, skipping segment"
-                    )
-                    break
-
-                audio_np: np.ndarray = segment["audio"]
-                capture_timestamp: float = segment["timestamp"]
-
-                # Skip if too short (should be filtered by producer, but double-check)
-                min_samples = int(settings.MIN_AUDIO_LENGTH * settings.SAMPLE_RATE)
-                if len(audio_np) < min_samples:
-                    continue
-
-                # Transcribe
-                start_time = time.time()
-                result = self._transcribe(audio_np)
-                inference_time = time.time() - start_time
-
-                # Skip empty transcriptions
-                if not result["text"].strip():
-                    logger.debug(
-                        f"Empty transcription for source {self.source_id}, skipping"
-                    )
-                    continue
-
-                # Check again before callback (might be shutting down)
-                if self._stop_event.is_set():
-                    logger.debug(
-                        f"LiveTranscriber {self.source_id} stopping, skipping callback"
-                    )
-                    break
-
-                # Calculate timing
-                duration = len(audio_np) / settings.SAMPLE_RATE
-                end_timestamp = capture_timestamp + duration
-
-                # Create utterance
-                utterance = Utterance(
-                    source_id=self.source_id,
-                    start_time=capture_timestamp,
-                    end_time=end_timestamp,
-                    text=result["text"],
-                    confidence=result.get("confidence", 1.0),
-                    is_final=True,
-                    overlaps_with=[],
-                )
-
-                # Send to merger via callback (only if not shutting down)
-                try:
-                    self.output_callback(utterance)
-                except RuntimeError as callback_error:
-                    logger.error(
-                        f"Callback error for source {self.source_id}: {callback_error}"
-                    )
-
-                # Update stats
-                self._total_segments += 1
-                self._total_inference_time += inference_time
-
-                logger.debug(
-                    f"Transcribed segment for source {self.source_id}: "
-                    f"'{result['text'][:50]}...' ({duration:.2f}s, RTF={inference_time / duration:.3f})"
-                )
-
+                self._handle_final_segment(segment)
             except queue.Empty:
-                # No segments available, continue
+                continue
+            except TranscriptionError as e:
+                self._handle_transcription_error(e)
+
+    def _streaming_loop(self):
+        """Inference loop with provisional updates while speaking."""
+        min_samples = int(settings.MIN_AUDIO_LENGTH * settings.SAMPLE_RATE)
+        while not self._stop_event.is_set():
+            try:
+                segment = self.input_queue.get_nowait()
+                self._handle_final_segment(segment)
+                if self.streaming_source is not None:
+                    self.streaming_source.clear_commit_ready()
+                self._last_provisional_text = ""
+                continue
+            except queue.Empty:
+                pass
+            except TranscriptionError as e:
+                self._handle_transcription_error(e)
+                if self.streaming_source is not None:
+                    self.streaming_source.clear_commit_ready()
+                    self._last_provisional_text = ""
                 continue
 
-            except TranscriptionError as e:
-                self._error_count += 1
-                logger.error(
-                    f"LiveTranscriber error for source {self.source_id}: {e}",
-                    exc_info=True,
-                )
+            snapshot = self.streaming_source.get_streaming_snapshot()
+            if snapshot["commit_ready"] or not snapshot["is_speaking"]:
+                if not snapshot["is_speaking"]:
+                    self._last_provisional_text = ""
+                time.sleep(0.05)
+                continue
 
-                # Send error utterance via callback (only if not shutting down)
-                if not self._stop_event.is_set():
-                    try:
-                        error_utterance = Utterance(
-                            source_id=self.source_id,
-                            start_time=time.time(),
-                            end_time=time.time(),
-                            text=f"[TRANSCRIPTION ERROR: {str(e)}]",
-                            confidence=0.0,
-                            is_final=False,
-                        )
-                        self.output_callback(error_utterance)
-                    except RuntimeError as callback_error:
-                        logger.error(f"Callback error: {callback_error}")
+            if time.time() - self._last_provisional_time < settings.PROVISIONAL_INTERVAL:
+                time.sleep(0.05)
+                continue
+
+            audio_np = snapshot["audio"]
+            if audio_np is None or len(audio_np) < min_samples:
+                time.sleep(0.05)
+                continue
+
+            result = self._transcribe(audio_np)
+            text = result["text"]
+            if not text.strip() or text == self._last_provisional_text:
+                self._last_provisional_time = time.time()
+                time.sleep(0.05)
+                continue
+
+            sample_rate = snapshot["sample_rate"]
+            duration = len(audio_np) / sample_rate
+            start_time = snapshot["speech_start_time"] or (time.time() - duration)
+            end_time = start_time + duration
+            utterance = Utterance(
+                source_id=self.source_id,
+                start_time=start_time,
+                end_time=end_time,
+                text=text,
+                confidence=result.get("confidence", 1.0),
+                is_final=False,
+                overlaps_with=[],
+            )
+
+            try:
+                self.output_callback(utterance)
+                self._last_provisional_text = text
+                self._last_provisional_time = time.time()
+            except RuntimeError as callback_error:
+                logger.error(
+                    f"Callback error for source {self.source_id}: {callback_error}"
+                )
+                time.sleep(0.05)
+
+    def _handle_final_segment(self, segment: Dict[str, Any]) -> None:
+        """Process a finalized segment from the producer."""
+        if self._stop_event.is_set():
+            logger.debug(
+                f"LiveTranscriber {self.source_id} stopping, skipping segment"
+            )
+            return
+
+        audio_np: np.ndarray = segment["audio"]
+        capture_timestamp: float = segment["timestamp"]
+        segment_start_time: float = segment.get("start_time", capture_timestamp)
+
+        min_samples = int(settings.MIN_AUDIO_LENGTH * settings.SAMPLE_RATE)
+        if len(audio_np) < min_samples:
+            return
+
+        start_time = time.time()
+        result = self._transcribe(audio_np)
+        inference_time = time.time() - start_time
+
+        if not result["text"].strip():
+            logger.debug(f"Empty transcription for source {self.source_id}, skipping")
+            return
+
+        if self._stop_event.is_set():
+            logger.debug(
+                f"LiveTranscriber {self.source_id} stopping, skipping callback"
+            )
+            return
+
+        sample_rate = segment.get("sample_rate", settings.SAMPLE_RATE)
+        duration = len(audio_np) / sample_rate
+        end_timestamp = segment_start_time + duration
+        utterance = Utterance(
+            source_id=self.source_id,
+            start_time=segment_start_time,
+            end_time=end_timestamp,
+            text=result["text"],
+            confidence=result.get("confidence", 1.0),
+            is_final=True,
+            overlaps_with=[],
+        )
+
+        try:
+            self.output_callback(utterance)
+        except RuntimeError as callback_error:
+            logger.error(f"Callback error for source {self.source_id}: {callback_error}")
+
+        self._total_segments += 1
+        self._total_inference_time += inference_time
+
+        logger.debug(
+            f"Transcribed segment for source {self.source_id}: "
+            f"'{result['text'][:50]}...' ({duration:.2f}s, RTF={inference_time / duration:.3f})"
+        )
+
+    def _handle_transcription_error(self, error: TranscriptionError) -> None:
+        """Log and emit an error utterance."""
+        self._error_count += 1
+        logger.error(
+            f"LiveTranscriber error for source {self.source_id}: {error}",
+            exc_info=True,
+        )
+
+        if not self._stop_event.is_set():
+            try:
+                error_utterance = Utterance(
+                    source_id=self.source_id,
+                    start_time=time.time(),
+                    end_time=time.time(),
+                    text=f"[TRANSCRIPTION ERROR: {str(error)}]",
+                    confidence=0.0,
+                    is_final=False,
+                )
+                self.output_callback(error_utterance)
+            except RuntimeError as callback_error:
+                logger.error(f"Callback error: {callback_error}")
 
     def _transcribe(self, audio_np: np.ndarray) -> Dict[str, Any]:
         """

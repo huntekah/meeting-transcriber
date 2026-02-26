@@ -89,6 +89,26 @@ class TestASRClient:
             mock_post.assert_called_once()
 
     @pytest.mark.asyncio
+    async def test_cancel_session(self):
+        """Test cancelling a session via API."""
+        settings = CLISettings()
+        client = ASRClient(settings)
+
+        with patch.object(client.client, "post") as mock_post:
+            mock_response = MagicMock()
+            mock_response.json.return_value = {
+                "session_id": "test-123",
+                "state": "cancelled",
+            }
+            mock_response.raise_for_status = MagicMock()
+            mock_post.return_value = mock_response
+
+            result = await client.cancel_session("test-123")
+
+            assert result["state"] == "cancelled"
+            mock_post.assert_called_once()
+
+    @pytest.mark.asyncio
     async def test_get_session(self):
         """Test getting session details via API."""
         settings = CLISettings()
