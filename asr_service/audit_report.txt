@@ -8,13 +8,13 @@ All checks passed!
 [main]	INFO	cli exclude tests: None
 [main]	INFO	running on Python 3.13.5
 Working... ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 100% 0:00:00
-Run started:2026-02-26 07:34:51.689217+00:00
+Run started:2026-02-26 09:04:59.510965+00:00
 
 Test results:
 	No issues identified.
 
 Code scanned:
-	Total lines of code: 4399
+	Total lines of code: 4567
 	Total lines skipped (#nosec): 0
 	Total potential issues skipped due to specifically being disabled (e.g., #nosec BXXX): 2
 
@@ -34,12 +34,11 @@ Files skipped (0):
 === MYPY TYPE CHECK ===
 src/asr_service/services/transcript_merger.py:29: note: By default the bodies of untyped functions are not checked, consider using --check-untyped-defs  [annotation-unchecked]
 src/asr_service/services/transcript_merger.py:35: note: By default the bodies of untyped functions are not checked, consider using --check-untyped-defs  [annotation-unchecked]
-src/asr_service/services/vad_producer.py:328: note: By default the bodies of untyped functions are not checked, consider using --check-untyped-defs  [annotation-unchecked]
+src/asr_service/services/vad_producer.py:336: note: By default the bodies of untyped functions are not checked, consider using --check-untyped-defs  [annotation-unchecked]
 src/asr_service/services/model_manager.py:39: note: By default the bodies of untyped functions are not checked, consider using --check-untyped-defs  [annotation-unchecked]
 src/asr_service/services/model_manager.py:41: note: By default the bodies of untyped functions are not checked, consider using --check-untyped-defs  [annotation-unchecked]
-src/asr_service/services/live_transcriber.py:117: note: By default the bodies of untyped functions are not checked, consider using --check-untyped-defs  [annotation-unchecked]
-src/asr_service/services/live_transcriber.py:118: note: By default the bodies of untyped functions are not checked, consider using --check-untyped-defs  [annotation-unchecked]
 src/asr_service/services/session_manager.py:34: note: By default the bodies of untyped functions are not checked, consider using --check-untyped-defs  [annotation-unchecked]
+src/cli_frontend/widgets/transcript_view.py:41: note: By default the bodies of untyped functions are not checked, consider using --check-untyped-defs  [annotation-unchecked]
 Success: no issues found in 52 source files
 
 === RADON COMPLEXITY ===
@@ -53,9 +52,9 @@ src/asr_service/core/logging.py
     C 37:0 LoggingSettings - A
     M 57:4 LoggingSettings.from_env - A
 src/asr_service/core/config.py
-    M 78:4 Settings.get_device - A
+    M 79:4 Settings.get_device - A
     C 22:0 Settings - A
-    M 73:4 Settings.__init__ - A
+    M 74:4 Settings.__init__ - A
 src/asr_service/core/singleton.py
     C 12:0 SingletonBase - A
     M 18:4 SingletonBase.__new__ - A
@@ -109,12 +108,12 @@ src/asr_service/api/v1/endpoints/devices.py
 src/asr_service/api/v1/endpoints/websocket.py
     F 17:0 websocket_endpoint - B
 src/asr_service/services/source_pipeline.py
-    M 86:4 SourcePipeline.stop - A
-    C 19:0 SourcePipeline - A
-    M 27:4 SourcePipeline.__init__ - A
-    M 69:4 SourcePipeline.start - A
-    M 121:4 SourcePipeline.get_audio - A
-    M 130:4 SourcePipeline.get_stats - A
+    M 89:4 SourcePipeline.stop - A
+    C 20:0 SourcePipeline - A
+    M 28:4 SourcePipeline.__init__ - A
+    M 72:4 SourcePipeline.start - A
+    M 124:4 SourcePipeline.get_audio - A
+    M 133:4 SourcePipeline.get_stats - A
 src/asr_service/services/session_manager.py
     M 40:4 SessionManager.create_session - A
     C 21:0 SessionManager - A
@@ -152,15 +151,17 @@ src/asr_service/services/audio_devices.py
     F 109:0 _is_macos_13_or_later - A
     F 171:0 get_device_by_index - A
 src/asr_service/services/vad_producer.py
-    M 235:4 VADAudioProducer._vad_processing_loop - B
-    M 134:4 VADAudioProducer.stop - B
+    M 238:4 VADAudioProducer._vad_processing_loop - C
+    M 136:4 VADAudioProducer.stop - B
     C 26:0 VADAudioProducer - A
     M 36:4 VADAudioProducer.__init__ - A
-    M 104:4 VADAudioProducer.start - A
-    M 301:4 VADAudioProducer._finalize_segment - A
-    M 164:4 VADAudioProducer._capture_loop - A
-    M 346:4 VADAudioProducer.get_full_audio - A
-    M 357:4 VADAudioProducer.get_stats - A
+    M 307:4 VADAudioProducer._finalize_segment - A
+    M 106:4 VADAudioProducer.start - A
+    M 167:4 VADAudioProducer._capture_loop - A
+    M 356:4 VADAudioProducer.get_full_audio - A
+    M 367:4 VADAudioProducer.get_stats - A
+    M 385:4 VADAudioProducer.get_streaming_snapshot - A
+    M 407:4 VADAudioProducer.clear_commit_ready - A
 src/asr_service/services/model_manager.py
     M 163:4 ModelManager._load_cold_pipeline_class - A
     C 22:0 ModelManager - A
@@ -207,13 +208,20 @@ src/asr_service/services/screencapture_producer.py
     M 335:4 ScreenCaptureAudioProducer.get_full_audio - A
     M 347:4 ScreenCaptureAudioProducer.get_stats - A
 src/asr_service/services/live_transcriber.py
-    M 99:4 LiveTranscriber._inference_loop - C
-    C 26:0 LiveTranscriber - A
-    M 202:4 LiveTranscriber._transcribe - A
-    M 69:4 LiveTranscriber.start - A
-    M 82:4 LiveTranscriber.stop - A
-    M 36:4 LiveTranscriber.__init__ - A
-    M 254:4 LiveTranscriber.get_stats - A
+    M 137:4 LiveTranscriber._streaming_loop - C
+    M 204:4 LiveTranscriber._handle_final_segment - B
+    C 38:0 LiveTranscriber - A
+    M 126:4 LiveTranscriber._final_only_loop - A
+    M 282:4 LiveTranscriber._transcribe - A
+    M 85:4 LiveTranscriber.start - A
+    M 98:4 LiveTranscriber.stop - A
+    M 260:4 LiveTranscriber._handle_transcription_error - A
+    C 26:0 StreamingSource - A
+    M 48:4 LiveTranscriber.__init__ - A
+    M 115:4 LiveTranscriber._inference_loop - A
+    M 334:4 LiveTranscriber.get_stats - A
+    M 31:4 StreamingSource.get_streaming_snapshot - A
+    M 34:4 StreamingSource.clear_commit_ready - A
 src/asr_service/services/cold_transcriber.py
     M 244:4 ColdPathPostProcessor._find_silence_chunks - C
     M 73:4 ColdPathPostProcessor.process_long_audio - B
@@ -256,16 +264,16 @@ src/cli_frontend/app.py
 src/cli_frontend/__main__.py
     F 11:0 main - A
 src/cli_frontend/screens/recording.py
-    M 78:4 RecordingScreen.on_ws_message - C
+    M 80:4 RecordingScreen.on_ws_message - C
     C 20:0 RecordingScreen - A
     M 29:4 RecordingScreen.__init__ - A
-    M 156:4 RecordingScreen.stop_recording - A
-    M 151:4 RecordingScreen.on_button_pressed - A
-    M 174:4 RecordingScreen.return_to_setup - A
-    M 183:4 RecordingScreen.on_unmount - A
+    M 176:4 RecordingScreen.stop_recording - A
+    M 171:4 RecordingScreen.on_button_pressed - A
+    M 194:4 RecordingScreen.return_to_setup - A
+    M 203:4 RecordingScreen.on_unmount - A
     M 50:4 RecordingScreen.compose - A
-    M 64:4 RecordingScreen.on_mount - A
-    M 147:4 RecordingScreen.action_stop_recording - A
+    M 66:4 RecordingScreen.on_mount - A
+    M 167:4 RecordingScreen.action_stop_recording - A
 src/cli_frontend/screens/setup.py
     M 128:4 SetupScreen.start_recording - C
     C 20:0 SetupScreen - A
@@ -304,18 +312,24 @@ src/cli_frontend/widgets/status_bar.py
     M 29:4 StatusBar.stop_recording - A
     M 48:4 StatusBar.set_status - A
 src/cli_frontend/widgets/transcript_view.py
-    C 13:0 TranscriptView - A
-    M 27:4 TranscriptView.add_utterance - A
-    M 16:4 TranscriptView.__init__ - A
-    M 64:4 TranscriptView.clear_transcript - A
+    F 13:0 _format_utterance_line - A
+    C 36:0 LiveTranscriptView - A
+    M 56:4 LiveTranscriptView._refresh_render - A
+    M 48:4 LiveTranscriptView.clear_partial - A
+    C 68:0 TranscriptView - A
+    M 39:4 LiveTranscriptView.__init__ - A
+    M 43:4 LiveTranscriptView.update_partial - A
+    M 71:4 TranscriptView.__init__ - A
+    M 82:4 TranscriptView.add_utterance - A
+    M 101:4 TranscriptView.clear_transcript - A
 src/cli_frontend/widgets/device_selector.py
     M 63:4 DeviceSelector.set_devices - B
     C 12:0 DeviceSelector - A
     M 15:4 DeviceSelector.__init__ - A
     M 45:4 DeviceSelector._create_options - A
 
-231 blocks (classes, functions, methods) analyzed.
-Average complexity: A (2.6233766233766236)
+246 blocks (classes, functions, methods) analyzed.
+Average complexity: A (2.66260162601626)
 
 === VULTURE DEAD CODE ===
 src/asr_service/api/v1/endpoints/devices.py:16: unused function 'get_audio_devices' (60% confidence)
@@ -324,10 +338,10 @@ src/asr_service/api/v1/endpoints/sessions.py:171: unused function 'get_session_s
 src/asr_service/api/v1/endpoints/websocket.py:16: unused function 'websocket_endpoint' (60% confidence)
 src/asr_service/core/config.py:25: unused variable 'model_config' (60% confidence)
 src/asr_service/core/config.py:32: unused variable 'WHISPER_MODEL' (60% confidence)
-src/asr_service/core/config.py:53: unused variable 'COLD_PATH_PARALLEL' (60% confidence)
-src/asr_service/core/config.py:59: unused variable 'HOST' (60% confidence)
-src/asr_service/core/config.py:62: unused variable 'PORT' (60% confidence)
-src/asr_service/core/config.py:71: unused variable 'COLD_PATH_PARALLEL_WORKERS' (60% confidence)
+src/asr_service/core/config.py:54: unused variable 'COLD_PATH_PARALLEL' (60% confidence)
+src/asr_service/core/config.py:60: unused variable 'HOST' (60% confidence)
+src/asr_service/core/config.py:63: unused variable 'PORT' (60% confidence)
+src/asr_service/core/config.py:72: unused variable 'COLD_PATH_PARALLEL_WORKERS' (60% confidence)
 src/asr_service/core/exceptions.py:22: unused class 'DeviceNotFoundError' (60% confidence)
 src/asr_service/core/exceptions.py:50: unused class 'SessionStateError' (60% confidence)
 src/asr_service/core/singleton.py:18: unused variable 'args' (100% confidence)
@@ -335,7 +349,6 @@ src/asr_service/main.py:71: unused function 'root' (60% confidence)
 src/asr_service/main.py:87: unused function 'health' (60% confidence)
 src/asr_service/schemas/devices.py:32: unused class 'Config' (60% confidence)
 src/asr_service/schemas/devices.py:33: unused variable 'json_schema_extra' (60% confidence)
-src/asr_service/schemas/transcription.py:43: unused variable 'is_final' (60% confidence)
 src/asr_service/schemas/transcription.py:49: unused class 'Config' (60% confidence)
 src/asr_service/schemas/transcription.py:50: unused variable 'frozen' (60% confidence)
 src/asr_service/schemas/transcription.py:51: unused variable 'json_schema_extra' (60% confidence)
@@ -371,10 +384,11 @@ src/asr_service/schemas/websocket.py:121: unused variable 'WSMessage' (60% confi
 src/asr_service/services/audio_devices.py:171: unused function 'get_device_by_index' (60% confidence)
 src/asr_service/services/audio_devices.py:188: unused function 'get_default_input_device' (60% confidence)
 src/asr_service/services/audio_mixer.py:146: unused method 'get_duration' (60% confidence)
+src/asr_service/services/live_transcriber.py:26: unused class 'StreamingSource' (60% confidence)
 src/asr_service/services/session_manager.py:160: unused method 'get_all_sessions' (60% confidence)
 src/asr_service/services/transcript_merger.py:135: unused method 'get_utterances_since' (60% confidence)
-src/asr_service/services/vad_producer.py:171: unused variable 'frames' (100% confidence)
-src/asr_service/services/vad_producer.py:171: unused variable 'time_info' (100% confidence)
+src/asr_service/services/vad_producer.py:174: unused variable 'frames' (100% confidence)
+src/asr_service/services/vad_producer.py:174: unused variable 'time_info' (100% confidence)
 src/asr_service/utils/file_ops.py:30: unused function 'create_temp_file' (60% confidence)
 src/asr_service/utils/file_ops.py:54: unused function 'validate_mime_type' (60% confidence)
 src/cli_frontend/app.py:19: unused variable 'CSS_PATH' (60% confidence)
@@ -390,7 +404,6 @@ src/cli_frontend/config.py:21: unused variable 'last_system_audio_device_index' 
 src/cli_frontend/config.py:25: unused class 'Config' (60% confidence)
 src/cli_frontend/config.py:26: unused variable 'env_prefix' (60% confidence)
 src/cli_frontend/config.py:27: unused variable 'extra' (60% confidence)
-src/cli_frontend/models.py:39: unused variable 'is_final' (60% confidence)
 src/cli_frontend/models.py:48: unused variable 'websocket_url' (60% confidence)
 src/cli_frontend/models.py:55: unused variable 'type' (60% confidence)
 src/cli_frontend/models.py:62: unused variable 'type' (60% confidence)
@@ -400,10 +413,10 @@ src/cli_frontend/models.py:78: unused variable 'code' (60% confidence)
 src/cli_frontend/models.py:82: unused variable 'WSMessage' (60% confidence)
 src/cli_frontend/screens/recording.py:23: unused variable 'BINDINGS' (60% confidence)
 src/cli_frontend/screens/recording.py:50: unused method 'compose' (60% confidence)
-src/cli_frontend/screens/recording.py:64: unused method 'on_mount' (60% confidence)
-src/cli_frontend/screens/recording.py:147: unused method 'action_stop_recording' (60% confidence)
-src/cli_frontend/screens/recording.py:151: unused method 'on_button_pressed' (60% confidence)
-src/cli_frontend/screens/recording.py:183: unused method 'on_unmount' (60% confidence)
+src/cli_frontend/screens/recording.py:66: unused method 'on_mount' (60% confidence)
+src/cli_frontend/screens/recording.py:167: unused method 'action_stop_recording' (60% confidence)
+src/cli_frontend/screens/recording.py:171: unused method 'on_button_pressed' (60% confidence)
+src/cli_frontend/screens/recording.py:203: unused method 'on_unmount' (60% confidence)
 src/cli_frontend/screens/settings.py:17: unused variable 'BINDINGS' (60% confidence)
 src/cli_frontend/screens/settings.py:25: unused method 'compose' (60% confidence)
 src/cli_frontend/screens/settings.py:77: unused method 'on_button_pressed' (60% confidence)
@@ -412,14 +425,14 @@ src/cli_frontend/screens/setup.py:35: unused method 'compose' (60% confidence)
 src/cli_frontend/screens/setup.py:71: unused method 'on_mount' (60% confidence)
 src/cli_frontend/screens/setup.py:121: unused method 'on_button_pressed' (60% confidence)
 src/cli_frontend/settings_persistence.py:83: unused method 'load_output_dir' (60% confidence)
-src/cli_frontend/widgets/transcript_view.py:64: unused method 'clear_transcript' (60% confidence)
+src/cli_frontend/widgets/transcript_view.py:101: unused method 'clear_transcript' (60% confidence)
 
 === PYLINT ===
 ************* Module asr_service.main
 src/asr_service/main.py:18:19: W0613: Unused argument 'app' (unused-argument)
 ************* Module asr_service.core.config
-src/asr_service/core/config.py:90:12: C0415: Import outside toplevel (torch) (import-outside-toplevel)
-src/asr_service/core/config.py:92:12: R1705: Unnecessary "elif" after "return", remove the leading "el" from "elif" (no-else-return)
+src/asr_service/core/config.py:91:12: C0415: Import outside toplevel (torch) (import-outside-toplevel)
+src/asr_service/core/config.py:93:12: R1705: Unnecessary "elif" after "return", remove the leading "el" from "elif" (no-else-return)
 ************* Module asr_service.core.singleton
 src/asr_service/core/singleton.py:18:0: W0613: Unused argument 'args' (unused-argument)
 src/asr_service/core/singleton.py:18:0: W0613: Unused argument 'kwargs' (unused-argument)
@@ -465,8 +478,8 @@ src/asr_service/api/v1/endpoints/devices.py:8:0: C0411: standard import "typing.
 ************* Module asr_service.api.v1.endpoints.websocket
 src/asr_service/api/v1/endpoints/websocket.py:72:11: W0718: Catching too general exception Exception (broad-exception-caught)
 ************* Module asr_service.services.source_pipeline
-src/asr_service/services/source_pipeline.py:27:4: R0913: Too many arguments (6/5) (too-many-arguments)
-src/asr_service/services/source_pipeline.py:27:4: R0917: Too many positional arguments (6/5) (too-many-positional-arguments)
+src/asr_service/services/source_pipeline.py:28:4: R0913: Too many arguments (6/5) (too-many-arguments)
+src/asr_service/services/source_pipeline.py:28:4: R0917: Too many positional arguments (6/5) (too-many-positional-arguments)
 ************* Module asr_service.services.session_manager
 src/asr_service/services/session_manager.py:74:16: W0707: Consider explicitly re-raising using 'except ValueError as exc' and 'raise ValueError(f'Output directory must be within {allowed_base}') from exc' (raise-missing-from)
 src/asr_service/services/session_manager.py:30:11: E0203: Access to member '_initialized' before its definition line 37 (access-member-before-definition)
@@ -485,15 +498,15 @@ src/asr_service/services/audio_devices.py:104:11: W0718: Catching too general ex
 src/asr_service/services/audio_devices.py:9:0: C0411: standard import "platform" should be placed before third party import "sounddevice" (wrong-import-order)
 src/asr_service/services/audio_devices.py:10:0: C0411: standard import "typing.List" should be placed before third party import "sounddevice" (wrong-import-order)
 ************* Module asr_service.services.vad_producer
-src/asr_service/services/vad_producer.py:158:0: C0301: Line too long (104/100) (line-too-long)
-src/asr_service/services/vad_producer.py:281:0: C0301: Line too long (117/100) (line-too-long)
-src/asr_service/services/vad_producer.py:26:0: R0902: Too many instance attributes (16/7) (too-many-instance-attributes)
+src/asr_service/services/vad_producer.py:160:0: C0301: Line too long (104/100) (line-too-long)
+src/asr_service/services/vad_producer.py:286:0: C0301: Line too long (117/100) (line-too-long)
+src/asr_service/services/vad_producer.py:26:0: R0902: Too many instance attributes (18/7) (too-many-instance-attributes)
 src/asr_service/services/vad_producer.py:36:4: R0913: Too many arguments (11/5) (too-many-arguments)
 src/asr_service/services/vad_producer.py:36:4: R0917: Too many positional arguments (11/5) (too-many-positional-arguments)
-src/asr_service/services/vad_producer.py:171:47: W0613: Unused argument 'frames' (unused-argument)
-src/asr_service/services/vad_producer.py:171:60: W0613: Unused argument 'time_info' (unused-argument)
-src/asr_service/services/vad_producer.py:233:12: W0707: Consider explicitly re-raising using 'raise AudioCaptureError(self.device_index, str(e)) from e' (raise-missing-from)
-src/asr_service/services/vad_producer.py:244:8: R1702: Too many nested blocks (6/5) (too-many-nested-blocks)
+src/asr_service/services/vad_producer.py:174:47: W0613: Unused argument 'frames' (unused-argument)
+src/asr_service/services/vad_producer.py:174:60: W0613: Unused argument 'time_info' (unused-argument)
+src/asr_service/services/vad_producer.py:236:12: W0707: Consider explicitly re-raising using 'raise AudioCaptureError(self.device_index, str(e)) from e' (raise-missing-from)
+src/asr_service/services/vad_producer.py:247:8: R1702: Too many nested blocks (6/5) (too-many-nested-blocks)
 ************* Module asr_service.services.model_manager
 src/asr_service/services/model_manager.py:105:12: W0707: Consider explicitly re-raising using 'raise ModelLoadingError('VAD/Whisper', str(e)) from e' (raise-missing-from)
 src/asr_service/services/model_manager.py:132:15: W0718: Catching too general exception Exception (broad-exception-caught)
@@ -517,13 +530,14 @@ src/asr_service/services/screencapture_producer.py:32:4: R0917: Too many positio
 src/asr_service/services/screencapture_producer.py:125:28: R1732: Consider using 'with' for resource-allocating operations (consider-using-with)
 src/asr_service/services/screencapture_producer.py:14:0: C0411: standard import "pathlib.Path" should be placed before third party import "numpy" (wrong-import-order)
 ************* Module asr_service.services.live_transcriber
-src/asr_service/services/live_transcriber.py:173:0: C0301: Line too long (104/100) (line-too-long)
-src/asr_service/services/live_transcriber.py:26:0: R0902: Too many instance attributes (10/7) (too-many-instance-attributes)
-src/asr_service/services/live_transcriber.py:36:4: R0913: Too many arguments (6/5) (too-many-arguments)
-src/asr_service/services/live_transcriber.py:36:4: R0917: Too many positional arguments (6/5) (too-many-positional-arguments)
-src/asr_service/services/live_transcriber.py:213:12: C0415: Import outside toplevel (mlx_whisper) (import-outside-toplevel)
-src/asr_service/services/live_transcriber.py:219:21: W1514: Using open without explicitly specifying an encoding (unspecified-encoding)
-src/asr_service/services/live_transcriber.py:252:12: W0707: Consider explicitly re-raising using 'raise TranscriptionError(str(e), self.source_id) from e' (raise-missing-from)
+src/asr_service/services/live_transcriber.py:31:4: C0116: Missing function or method docstring (missing-function-docstring)
+src/asr_service/services/live_transcriber.py:34:4: C0116: Missing function or method docstring (missing-function-docstring)
+src/asr_service/services/live_transcriber.py:38:0: R0902: Too many instance attributes (13/7) (too-many-instance-attributes)
+src/asr_service/services/live_transcriber.py:48:4: R0913: Too many arguments (7/5) (too-many-arguments)
+src/asr_service/services/live_transcriber.py:48:4: R0917: Too many positional arguments (7/5) (too-many-positional-arguments)
+src/asr_service/services/live_transcriber.py:293:12: C0415: Import outside toplevel (mlx_whisper) (import-outside-toplevel)
+src/asr_service/services/live_transcriber.py:299:21: W1514: Using open without explicitly specifying an encoding (unspecified-encoding)
+src/asr_service/services/live_transcriber.py:332:12: W0707: Consider explicitly re-raising using 'raise TranscriptionError(str(e), self.source_id) from e' (raise-missing-from)
 ************* Module asr_service.services.cold_transcriber
 src/asr_service/services/cold_transcriber.py:179:0: C0301: Line too long (116/100) (line-too-long)
 src/asr_service/services/cold_transcriber.py:204:0: C0301: Line too long (133/100) (line-too-long)
@@ -564,31 +578,17 @@ src/cli_frontend/config.py:25:4: C0115: Missing class docstring (missing-class-d
 src/cli_frontend/config.py:25:4: R0903: Too few public methods (0/2) (too-few-public-methods)
 ************* Module cli_frontend.models
 src/cli_frontend/models.py:8:0: C0411: standard import "typing.List" should be placed before third party import "pydantic.BaseModel" (wrong-import-order)
-************* Module cli_frontend.app
-src/cli_frontend/app.py:7:0: E0401: Unable to import 'textual.app' (import-error)
-src/cli_frontend/app.py:8:0: E0401: Unable to import 'textual.binding' (import-error)
 ************* Module cli_frontend.screens.recording
-src/cli_frontend/screens/recording.py:7:0: E0401: Unable to import 'textual.app' (import-error)
-src/cli_frontend/screens/recording.py:8:0: E0401: Unable to import 'textual.screen' (import-error)
-src/cli_frontend/screens/recording.py:9:0: E0401: Unable to import 'textual.containers' (import-error)
-src/cli_frontend/screens/recording.py:10:0: E0401: Unable to import 'textual.widgets' (import-error)
-src/cli_frontend/screens/recording.py:103:19: W0718: Catching too general exception Exception (broad-exception-caught)
-src/cli_frontend/screens/recording.py:128:19: W0718: Catching too general exception Exception (broad-exception-caught)
-src/cli_frontend/screens/recording.py:169:15: W0718: Catching too general exception Exception (broad-exception-caught)
+src/cli_frontend/screens/recording.py:117:19: W0718: Catching too general exception Exception (broad-exception-caught)
+src/cli_frontend/screens/recording.py:148:19: W0718: Catching too general exception Exception (broad-exception-caught)
+src/cli_frontend/screens/recording.py:80:4: R0912: Too many branches (15/12) (too-many-branches)
+src/cli_frontend/screens/recording.py:80:4: R0915: Too many statements (57/50) (too-many-statements)
+src/cli_frontend/screens/recording.py:189:15: W0718: Catching too general exception Exception (broad-exception-caught)
 ************* Module cli_frontend.screens.setup
 src/cli_frontend/screens/setup.py:88:0: C0301: Line too long (118/100) (line-too-long)
-src/cli_frontend/screens/setup.py:8:0: E0401: Unable to import 'textual.app' (import-error)
-src/cli_frontend/screens/setup.py:9:0: E0401: Unable to import 'textual.screen' (import-error)
-src/cli_frontend/screens/setup.py:10:0: E0401: Unable to import 'textual.containers' (import-error)
-src/cli_frontend/screens/setup.py:11:0: E0401: Unable to import 'textual.widgets' (import-error)
 src/cli_frontend/screens/setup.py:115:15: W0718: Catching too general exception Exception (broad-exception-caught)
 src/cli_frontend/screens/setup.py:204:15: W0718: Catching too general exception Exception (broad-exception-caught)
 src/cli_frontend/screens/setup.py:192:12: C0415: Import outside toplevel (recording.RecordingScreen) (import-outside-toplevel)
-************* Module cli_frontend.screens.settings
-src/cli_frontend/screens/settings.py:7:0: E0401: Unable to import 'textual.screen' (import-error)
-src/cli_frontend/screens/settings.py:8:0: E0401: Unable to import 'textual.app' (import-error)
-src/cli_frontend/screens/settings.py:9:0: E0401: Unable to import 'textual.containers' (import-error)
-src/cli_frontend/screens/settings.py:10:0: E0401: Unable to import 'textual.widgets' (import-error)
 ************* Module cli_frontend.api.client
 src/cli_frontend/api/client.py:8:0: C0411: standard import "typing.List" should be placed before third party import "httpx" (wrong-import-order)
 ************* Module cli_frontend.api.websocket
@@ -597,21 +597,14 @@ src/cli_frontend/api/websocket.py:57:27: W0718: Catching too general exception E
 src/cli_frontend/api/websocket.py:9:0: C0411: standard import "json" should be placed before third party import "websockets" (wrong-import-order)
 src/cli_frontend/api/websocket.py:10:0: C0411: standard import "typing.Callable" should be placed before third party import "websockets" (wrong-import-order)
 ************* Module cli_frontend.widgets.status_bar
-src/cli_frontend/widgets/status_bar.py:7:0: E0401: Unable to import 'textual.widgets' (import-error)
-src/cli_frontend/widgets/status_bar.py:8:0: E0401: Unable to import 'textual' (import-error)
 src/cli_frontend/widgets/status_bar.py:9:0: C0411: standard import "datetime.datetime" should be placed before third party imports "textual.widgets.Static", "textual.work" (wrong-import-order)
 src/cli_frontend/widgets/status_bar.py:10:0: C0411: standard import "asyncio" should be placed before third party imports "textual.widgets.Static", "textual.work" (wrong-import-order)
 ************* Module cli_frontend.widgets.transcript_view
-src/cli_frontend/widgets/transcript_view.py:35:0: C0301: Line too long (113/100) (line-too-long)
-src/cli_frontend/widgets/transcript_view.py:7:0: E0401: Unable to import 'textual.widgets' (import-error)
+src/cli_frontend/widgets/transcript_view.py:90:0: C0301: Line too long (113/100) (line-too-long)
 src/cli_frontend/widgets/transcript_view.py:8:0: C0411: standard import "datetime.datetime" should be placed before third party import "textual.widgets.RichLog" (wrong-import-order)
 ************* Module cli_frontend.widgets.device_selector
 src/cli_frontend/widgets/device_selector.py:74:0: C0301: Line too long (101/100) (line-too-long)
 src/cli_frontend/widgets/device_selector.py:75:0: C0301: Line too long (104/100) (line-too-long)
-src/cli_frontend/widgets/device_selector.py:7:0: E0401: Unable to import 'textual.widgets' (import-error)
-src/cli_frontend/widgets/device_selector.py:86:16: W0201: Attribute 'value' defined outside __init__ (attribute-defined-outside-init)
-src/cli_frontend/widgets/device_selector.py:93:20: W0201: Attribute 'value' defined outside __init__ (attribute-defined-outside-init)
-src/cli_frontend/widgets/device_selector.py:12:0: R0903: Too few public methods (1/2) (too-few-public-methods)
 src/cli_frontend/widgets/device_selector.py:8:0: C0411: standard import "typing.List" should be placed before third party import "textual.widgets.Select" (wrong-import-order)
 src/cli_frontend/widgets/device_selector.py:1:0: R0801: Similar lines in 2 files
 ==asr_service.core.logging:[106:116]
@@ -643,7 +636,7 @@ def _normalize_level(raw_level: str, default: LogLevel) -> LogLevel:
 @dataclass (duplicate-code)
 
 ------------------------------------------------------------------
-Your code has been rated at 8.86/10 (previous run: 8.86/10, +0.00)
+Your code has been rated at 9.32/10 (previous run: 8.86/10, +0.45)
 
 
 === END ===

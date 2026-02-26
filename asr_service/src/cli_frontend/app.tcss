@@ -76,6 +76,38 @@ Screen {
     background: $surface;
 }
 
+#controls_main, #controls_confirm {
+    align: center middle;
+    height: 3;
+}
+
+#controls_confirm {
+    width: 100%;
+}
+
+#discard_prompt {
+    width: auto;
+    margin-right: 1;
+}
+
+#controls_confirm Button {
+    margin-left: 1;
+}
+
+#discard_btn {
+    background: #2a2a2a;
+    color: #e0e0e0;
+}
+
+#discard_btn:hover, #discard_btn:focus {
+    background: $accent;
+    color: $text;
+}
+
+.hidden {
+    display: none;
+}
+
 /* Settings modal styles */
 #settings_modal {
     width: 60;

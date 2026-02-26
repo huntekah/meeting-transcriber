@@ -19,6 +19,7 @@ class SessionState(str, Enum):
     PROCESSING = "processing"  # Cold path transcription running
     COMPLETED = "completed"  # Final transcript ready
     FAILED = "failed"  # Error occurred
+    CANCELLED = "cancelled"  # Recording discarded
 
 
 class Utterance(BaseModel):

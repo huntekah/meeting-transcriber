@@ -72,6 +72,22 @@ class ASRClient:
         response.raise_for_status()
         return response.json()
 
+    async def cancel_session(self, session_id: str) -> Dict[str, Any]:
+        """
+        Cancel recording session and discard outputs.
+
+        POST /api/v1/sessions/{session_id}/cancel
+
+        Args:
+            session_id: Session ID to cancel
+
+        Returns:
+            Session response with updated state
+        """
+        response = await self.client.post(f"/api/v1/sessions/{session_id}/cancel")
+        response.raise_for_status()
+        return response.json()
+
     async def get_session(self, session_id: str) -> Dict[str, Any]:
         """
         Get session status and transcript.
