@@ -12,11 +12,12 @@ import queue
 from pathlib import Path
 from datetime import datetime
 from typing import List, Dict, Any, Optional
-from fastapi import WebSocket
+from fastapi import WebSocket, WebSocketDisconnect
 import concurrent.futures
 
 from ..core.config import settings
 from ..core.logging import logger
+from ..core.exceptions import ModelLoadingError, TranscriptionError
 from ..schemas.transcription import (
     SessionState,
     Utterance,
@@ -245,7 +246,7 @@ class ActiveSession:
                 logger.info(
                     f"Session {self.session_id}: Removed empty output directory {self.output_dir}"
                 )
-        except Exception as e:
+        except OSError as e:
             logger.warning(
                 f"Session {self.session_id}: Failed to remove empty output directory: {e}"
             )
@@ -265,7 +266,7 @@ class ActiveSession:
             logger.info(
                 f"Session {self.session_id} completed successfully (background)"
             )
-        except Exception as e:
+        except (ModelLoadingError, TranscriptionError, FileNotFoundError, RuntimeError) as e:
             logger.error(
                 f"Session {self.session_id} cold path failed: {e}", exc_info=True
             )
@@ -379,7 +380,7 @@ class ActiveSession:
             logger.debug(
                 f"Utterance broadcast scheduled to event loop {self._event_loop}"
             )
-        except Exception as e:
+        except (RuntimeError, ValueError) as e:
             logger.error(f"Failed to schedule utterance broadcast: {e}", exc_info=True)
 
     async def _broadcast_message(self, message):
@@ -394,7 +395,7 @@ class ActiveSession:
             for ws in self._websocket_clients:
                 try:
                     await ws.send_json(message.model_dump())
-                except Exception as e:
+                except (WebSocketDisconnect, RuntimeError, ConnectionError) as e:
                     logger.warning(f"WebSocket send failed: {e}")
                     disconnected.append(ws)
 
@@ -471,7 +472,7 @@ class ActiveSession:
             asyncio.run_coroutine_threadsafe(
                 self._broadcast_message(message), self._event_loop
             )
-        except Exception as e:
+        except (RuntimeError, ValueError) as e:
             logger.error(f"Failed to schedule state broadcast: {e}", exc_info=True)
 
     def get_document(self) -> TranscriptDocument:
@@ -517,7 +518,7 @@ class ActiveSession:
             logger.info(
                 f"Session {self.session_id}: Transcript saved to {self.transcript_path}"
             )
-        except Exception as e:
+        except (OSError, ValueError) as e:
             logger.error(
                 f"Session {self.session_id}: Failed to save transcript: {e}",
                 exc_info=True,
@@ -578,7 +579,7 @@ class ActiveSession:
             logger.info(
                 f"Session {self.session_id}: Markdown transcript saved to {markdown_path}"
             )
-        except Exception as e:
+        except (OSError, ValueError) as e:
             logger.error(
                 f"Session {self.session_id}: Failed to save markdown transcript: {e}",
                 exc_info=True,

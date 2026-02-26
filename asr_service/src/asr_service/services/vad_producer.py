@@ -225,7 +225,7 @@ class VADAudioProducer(AudioProducerBase):
                 while not self._stop_event.is_set():
                     time.sleep(0.1)
 
-        except Exception as e:
+        except (sd.PortAudioError, ValueError, RuntimeError, OSError) as e:
             logger.error(
                 f"Audio capture failed for source {self.source_id}: {e}",
                 exc_info=True,
@@ -285,12 +285,12 @@ class VADAudioProducer(AudioProducerBase):
                                 self._is_speaking = False
                                 self._silence_counter = 0
 
-                except Exception as e:
+                except (RuntimeError, ValueError) as e:
                     logger.error(
                         f"VAD error for source {self.source_id}: {e}", exc_info=True
                     )
 
-            except Exception as e:
+            except (RuntimeError, ValueError) as e:
                 logger.error(
                     f"VAD processing loop error for source {self.source_id}: {e}",
                     exc_info=True,

@@ -206,7 +206,7 @@ async def test_long_audio_with_vad_chunking(loaded_models, tmp_path):
         for speaker in speakers:
             assert speaker.startswith("SPEAKER_"), f"Invalid speaker label: {speaker}"
 
-    print(f"\n=== Long Audio Test Results ===")
+    print("\n=== Long Audio Test Results ===")
     print(f"Input duration: {duration_seconds:.2f}s")
     print(f"Output duration: {result['duration']:.2f}s")
     print(f"Segments: {len(result['segments'])}")

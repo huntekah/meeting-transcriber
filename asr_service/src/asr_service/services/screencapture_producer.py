@@ -5,7 +5,7 @@ Captures system audio on macOS using ScreenCaptureKit via a compiled Swift binar
 Outputs audio segments to queue for transcription.
 """
 
-import subprocess
+import subprocess  # nosec B404
 import threading
 import queue
 import time
@@ -122,7 +122,7 @@ class ScreenCaptureAudioProducer(AudioProducerBase):
 
         # Spawn subprocess
         try:
-            self._process = subprocess.Popen(
+            self._process = subprocess.Popen(  # nosec B603
                 [
                     str(self.binary_path),
                     str(self.sample_rate),
@@ -231,8 +231,6 @@ class ScreenCaptureAudioProducer(AudioProducerBase):
                 return
 
             buffer = np.array([], dtype=np.float32)
-            bytes_per_sample = 4  # float32 = 4 bytes
-
             while not self._stop_event.is_set():
                 try:
                     # Read chunk from stdout
@@ -266,7 +264,7 @@ class ScreenCaptureAudioProducer(AudioProducerBase):
                         buffer = buffer[self.segment_samples :]
                         self._push_segment(segment_audio)
 
-                except Exception as e:
+                except (OSError, RuntimeError, ValueError) as e:
                     logger.error(
                         f"Error reading from subprocess for source {self.source_id}: {e}",
                         exc_info=True,

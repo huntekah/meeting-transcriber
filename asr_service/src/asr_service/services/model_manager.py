@@ -5,9 +5,9 @@ Manages loading and caching of ML models (VAD, Whisper, Diarization).
 Thread-safe singleton with lazy loading.
 """
 
-import sys
 import threading
 import asyncio
+import importlib.util
 from pathlib import Path
 from typing import Optional
 import torch
@@ -15,10 +15,11 @@ import torch
 from ..core.config import settings
 from ..core.logging import logger
 from ..core.exceptions import ModelLoadingError
+from ..core.singleton import SingletonBase
 from ..utils.file_ops import get_project_root
 
 
-class ModelManager:
+class ModelManager(SingletonBase):
     """
     Thread-safe singleton for managing model lifecycle.
 
@@ -26,20 +27,9 @@ class ModelManager:
     Supports async loading to not block FastAPI event loop.
     """
 
-    _instance: Optional["ModelManager"] = None
-    _initialized: bool = False
-    _lock = threading.Lock()
     _cold_pipeline_lock = (
         threading.Lock()
     )  # Serialize cold pipeline access (Numba/pyannote not thread-safe)
-
-    def __new__(cls):
-        if cls._instance is None:
-            with cls._lock:
-                if cls._instance is None:
-                    cls._instance = super().__new__(cls)
-                    cls._instance._initialized = False
-        return cls._instance
 
     def __init__(self):
         if self._initialized:
@@ -156,35 +146,46 @@ class ModelManager:
         logger.info("Loading cold path pipeline...")
 
         try:
-            # Add scripts directory to path
-            try:
-                repo_root = get_project_root()
-                scripts_dir = repo_root / "scripts"
-            except FileNotFoundError:
-                logger.warning("Could not find project root, using relative path")
-                scripts_dir = Path("scripts")
-
-            if str(scripts_dir) not in sys.path:
-                sys.path.insert(0, str(scripts_dir))
-
-            # Import cold path pipeline
-            from cold_path_pipeline_v2 import ColdPathPipeline_MLX
-
-            # Initialize pipeline
-            self.cold_pipeline = ColdPathPipeline_MLX(
+            pipeline_class = self._load_cold_pipeline_class()
+            self.cold_pipeline = pipeline_class(
                 whisper_model=settings.MLX_WHISPER_MODEL,
                 diarization_model=settings.DIARIZATION_MODEL,
                 hf_token=settings.HF_TOKEN,
                 use_diarization=True,
                 verbose=False,
             )
-
             logger.info("Cold path pipeline loaded")
             return self.cold_pipeline
-
-        except Exception as e:
+        except (FileNotFoundError, ImportError, AttributeError, RuntimeError) as e:
             logger.error(f"Cold pipeline loading failed: {e}", exc_info=True)
-            raise ModelLoadingError("ColdPathPipeline_MLX", str(e))
+            raise ModelLoadingError("ColdPathPipeline_MLX", str(e)) from e
+
+    def _load_cold_pipeline_class(self):
+        pipeline_path = self._resolve_cold_pipeline_path()
+        spec = importlib.util.spec_from_file_location(
+            "cold_path_pipeline_v2", pipeline_path
+        )
+        if spec is None or spec.loader is None:
+            raise ImportError(f"Unable to load module from {pipeline_path}")
+
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        if not hasattr(module, "ColdPathPipeline_MLX"):
+            raise AttributeError("ColdPathPipeline_MLX not found in cold_path_pipeline_v2")
+        return module.ColdPathPipeline_MLX
+
+    def _resolve_cold_pipeline_path(self) -> Path:
+        try:
+            repo_root = get_project_root()
+            pipeline_path = repo_root / "scripts" / "cold_path_pipeline_v2.py"
+        except FileNotFoundError as e:
+            logger.warning(f"Could not find project root: {e}")
+            pipeline_path = Path("scripts/cold_path_pipeline_v2.py")
+
+        if not pipeline_path.exists():
+            raise FileNotFoundError(f"Cold path pipeline not found at {pipeline_path}")
+
+        return pipeline_path
 
     def is_loaded(self) -> bool:
         """

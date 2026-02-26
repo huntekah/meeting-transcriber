@@ -12,7 +12,12 @@ print_summary() {
   [ -n "$radon_output" ] && echo "RADON: $radon_output" || echo "RADON: ✓ No high complexity functions"
   vulture_count=$(awk '/^=== VULTURE DEAD CODE ===/,/^=== PYLINT/ { if (/unused/) count++ } END { print count+0 }' audit_report.txt)
   if [ "$vulture_count" -gt 0 ]; then echo "VULTURE: $vulture_count unused items found"; else echo "VULTURE: ✓ No unused code"; fi
-  awk '/^=== PYLINT ===/,/^=== END/ { if (/^[a-z].*:[0-9]+:[0-9]+:/) print "PYLINT: " $0 }' audit_report.txt | head -1
+  pylint_score=$(awk '/^=== PYLINT ===/,/^=== END/ { if (/rated at/) print }' audit_report.txt | tail -1)
+  if [ -n "$pylint_score" ]; then
+    echo "PYLINT: $pylint_score"
+  else
+    echo "PYLINT: (score not found)"
+  fi
 }
 
 echo "=== RUFF CHECK ===" > audit_report.txt
