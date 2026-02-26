@@ -57,6 +57,12 @@ Screen {
     text-style: bold;
 }
 
+#live_transcript {
+    height: auto;
+    margin: 0 1 1 1;
+    color: $text-muted;
+}
+
 #transcript {
     height: 1fr;
     border: solid $primary;

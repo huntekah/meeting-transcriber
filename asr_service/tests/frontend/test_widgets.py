@@ -4,10 +4,21 @@ Tests for CLI frontend widgets.
 Tests StatusBar, TranscriptView, and DeviceSelector widgets.
 """
 
+from textual.app import App, ComposeResult
+from textual.containers import Vertical
 from cli_frontend.widgets.status_bar import StatusBar
-from cli_frontend.widgets.transcript_view import TranscriptView
+from cli_frontend.widgets.transcript_view import TranscriptView, LiveTranscriptView
 from cli_frontend.widgets.device_selector import DeviceSelector
 from cli_frontend.models import AudioDevice, Utterance
+
+
+class _LiveTranscriptLayoutApp(App):
+    """Minimal app to validate LiveTranscriptView layout."""
+
+    def compose(self) -> ComposeResult:
+        with Vertical(id="recording_container"):
+            yield LiveTranscriptView(id="live_transcript")
+            yield TranscriptView(id="transcript")
 
 
 class TestStatusBar:
@@ -225,3 +236,37 @@ class TestDeviceSelector:
                 # Verify devices were stored correctly
                 default_device = next(d for d in selector.devices if d.is_default)
                 assert default_device.device_index == 1
+
+
+class TestLiveTranscriptView:
+    """Test LiveTranscriptView widget."""
+
+    def test_update_and_clear_partial(self):
+        """Test updating and clearing partials."""
+        from unittest.mock import patch
+
+        view = LiveTranscriptView()
+
+        utterance = Utterance(
+            source_id=0,
+            start_time=1000.0,
+            end_time=1002.0,
+            text="Partial text",
+            confidence=0.95,
+            is_final=False,
+        )
+
+        with patch.object(view, "update") as mock_update:
+            view.update_partial(utterance)
+            assert 0 in view._partials
+            mock_update.assert_called()
+
+            view.clear_partial(utterance.source_id)
+            assert 0 not in view._partials
+            assert mock_update.call_count >= 2
+
+    async def test_layout_mount_does_not_crash(self):
+        """Mount LiveTranscriptView in a layout to ensure no crash."""
+        app = _LiveTranscriptLayoutApp()
+        async with app.run_test():
+            assert app.query_one("#live_transcript", LiveTranscriptView)

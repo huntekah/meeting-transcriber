@@ -8,7 +8,7 @@ from textual.app import ComposeResult
 from textual.screen import Screen
 from textual.containers import Vertical, Horizontal
 from textual.widgets import Header, Footer, Button
-from cli_frontend.widgets.transcript_view import TranscriptView
+from cli_frontend.widgets.transcript_view import TranscriptView, LiveTranscriptView
 from cli_frontend.widgets.status_bar import StatusBar
 from cli_frontend.api.client import ASRClient
 from cli_frontend.api.websocket import WSClient
@@ -56,6 +56,8 @@ class RecordingScreen(Screen):
 
             yield TranscriptView(id="transcript")
 
+            yield LiveTranscriptView(id="live_transcript")
+
             with Horizontal(id="controls"):
                 yield Button("⏹ Stop Recording", variant="error", id="stop_btn")
 
@@ -95,10 +97,22 @@ class RecordingScreen(Screen):
                 )
 
                 transcript = self.query_one("#transcript", TranscriptView)
+                live_transcript = self.query_one("#live_transcript", LiveTranscriptView)
                 logger.debug(f"Got TranscriptView widget: {transcript}")
 
-                transcript.add_utterance(msg.data)
-                logger.info("Utterance added to transcript view")
+                if not msg.data.is_final and msg.data.text.startswith(
+                    "[TRANSCRIPTION ERROR"
+                ):
+                    transcript.add_utterance(msg.data)
+                    live_transcript.clear_partial(msg.data.source_id)
+                    logger.info("Error utterance added to transcript view")
+                elif msg.data.is_final:
+                    transcript.add_utterance(msg.data)
+                    live_transcript.clear_partial(msg.data.source_id)
+                    logger.info("Utterance added to transcript view")
+                elif msg.data.text.strip():
+                    live_transcript.update_partial(msg.data)
+                    logger.info("Live utterance updated")
 
             except Exception as e:
                 logger.error(f"Error processing utterance: {e}", exc_info=True)
@@ -122,6 +136,12 @@ class RecordingScreen(Screen):
                     self.set_timer(2.0, self.return_to_setup)
                 elif msg.state == "failed":
                     status_bar.set_status("❌ Failed")
+
+                if msg.state in {"stopping", "processing", "completed", "failed"}:
+                    live_transcript = self.query_one(
+                        "#live_transcript", LiveTranscriptView
+                    )
+                    live_transcript.clear_partial()
 
                 logger.info(f"State changed to: {msg.state}")
 

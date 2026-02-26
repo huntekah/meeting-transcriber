@@ -86,6 +86,8 @@ class VADAudioProducer(AudioProducerBase):
         self._growing_buffer: list[np.ndarray] = []
         self._is_speaking = False
         self._silence_counter = 0
+        self._commit_ready = False
+        self._speech_start_time: float | None = None
 
         # Audio recording for final save
         self._all_audio_chunks: list[np.ndarray] = []
@@ -157,6 +159,7 @@ class VADAudioProducer(AudioProducerBase):
                 logger.info(
                     f"Finalizing {len(self._growing_buffer)} pending chunks for source {self.source_id}"
                 )
+                self._commit_ready = True
                 self._finalize_segment()
 
         logger.info(f"VADAudioProducer {self.source_id} stopped")
@@ -265,21 +268,24 @@ class VADAudioProducer(AudioProducerBase):
                     # VAD state machine
                     if vad_prob > self.vad_threshold:
                         # Speech detected
-                        if not self._is_speaking:
+                        if not self._is_speaking and not self._commit_ready:
                             logger.debug(
                                 f"[Source {self.source_id}] Speech START (VAD prob: {vad_prob:.3f})"
                             )
-                        self._is_speaking = True
-                        self._silence_counter = 0
+                            self._speech_start_time = time.time()
+                            self._is_speaking = True
+                        if not self._commit_ready:
+                            self._silence_counter = 0
                     else:
                         # Silence detected
-                        if self._is_speaking:
+                        if self._is_speaking and not self._commit_ready:
                             self._silence_counter += 1
                             if self._silence_counter >= self.silence_chunks:
                                 # Enough silence - finalize segment
                                 logger.debug(
                                     f"[Source {self.source_id}] Speech END (silence chunks: {self._silence_counter})"
                                 )
+                                self._commit_ready = True
                                 with self._buffer_lock:
                                     self._finalize_segment()
                                 self._is_speaking = False
@@ -323,12 +329,16 @@ class VADAudioProducer(AudioProducerBase):
 
         # Calculate timestamp
         current_time = time.time()
+        segment_start_time = self._speech_start_time or current_time
+        self._speech_start_time = None
 
         # Create segment dictionary
         segment: Dict[str, Any] = {
             "audio": audio_np,
             "timestamp": current_time,
+            "start_time": segment_start_time,
             "source_id": self.source_id,
+            "sample_rate": self.sample_rate,
         }
 
         # Push to queue (non-blocking with timeout)
@@ -369,4 +379,31 @@ class VADAudioProducer(AudioProducerBase):
             "buffer_size": len(self._growing_buffer),
             "is_speaking": self._is_speaking,
             "silence_counter": self._silence_counter,
+            "commit_ready": self._commit_ready,
         }
+
+    def get_streaming_snapshot(self) -> Dict[str, Any]:
+        """
+        Snapshot of streaming state for provisional transcription.
+
+        Returns:
+            Dict with audio (np.ndarray | None), speech_start_time, is_speaking,
+            commit_ready, and sample_rate.
+        """
+        with self._buffer_lock:
+            if len(self._growing_buffer) == 0:
+                audio_np = None
+            else:
+                audio_np = np.concatenate(self._growing_buffer)
+
+        return {
+            "audio": audio_np,
+            "speech_start_time": self._speech_start_time,
+            "is_speaking": self._is_speaking,
+            "commit_ready": self._commit_ready,
+            "sample_rate": self.sample_rate,
+        }
+
+    def clear_commit_ready(self) -> None:
+        """Clear commit_ready after finalization is consumed."""
+        self._commit_ready = False
