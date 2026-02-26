@@ -159,8 +159,7 @@ class LiveTranscriber:
                 # Send to merger via callback (only if not shutting down)
                 try:
                     self.output_callback(utterance)
-                except Exception as callback_error:
-                    # Don't crash the thread if callback fails
+                except RuntimeError as callback_error:
                     logger.error(
                         f"Callback error for source {self.source_id}: {callback_error}"
                     )
@@ -178,7 +177,7 @@ class LiveTranscriber:
                 # No segments available, continue
                 continue
 
-            except Exception as e:
+            except TranscriptionError as e:
                 self._error_count += 1
                 logger.error(
                     f"LiveTranscriber error for source {self.source_id}: {e}",
@@ -197,7 +196,7 @@ class LiveTranscriber:
                             is_final=False,
                         )
                         self.output_callback(error_utterance)
-                    except Exception as callback_error:
+                    except RuntimeError as callback_error:
                         logger.error(f"Callback error: {callback_error}")
 
     def _transcribe(self, audio_np: np.ndarray) -> Dict[str, Any]:
@@ -245,7 +244,7 @@ class LiveTranscriber:
 
             return {"text": text, "confidence": 1.0}  # MLX doesn't provide confidence
 
-        except Exception as e:
+        except (ImportError, RuntimeError, ValueError, OSError) as e:
             logger.error(
                 f"MLX-Whisper transcription failed for source {self.source_id}: {e}",
                 exc_info=True,

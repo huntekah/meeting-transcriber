@@ -3,7 +3,7 @@ Turn on during meeting. Get transcription live, and a text note later, to use wi
 
 An ASR meeting transcriber app.
 
-![Frontend CLI Example](assets/frontend_example_cli.png)
+![ASR demo](assets/asr_demo.gif)
 
 ## Features
 

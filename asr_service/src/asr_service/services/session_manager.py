@@ -13,26 +13,18 @@ from pathlib import Path
 from ..core.config import settings
 from ..core.logging import logger
 from ..core.exceptions import SessionNotFoundError
+from ..core.singleton import SingletonBase
 from ..schemas.transcription import SourceConfig
 from .session import ActiveSession
 
 
-class SessionManager:
+class SessionManager(SingletonBase):
     """
     Global singleton managing all active sessions.
 
     Thread-safe registry with async lock.
     Provides session lifecycle management.
     """
-
-    _instance: Optional["SessionManager"] = None
-    _initialized: bool = False
-
-    def __new__(cls):
-        if cls._instance is None:
-            cls._instance = super().__new__(cls)
-            cls._instance._initialized = False
-        return cls._instance
 
     def __init__(self):
         if self._initialized:

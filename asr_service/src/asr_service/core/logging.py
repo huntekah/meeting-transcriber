@@ -17,16 +17,27 @@ import os
 import sys
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Literal
+from typing import Literal, cast
 
 from loguru import logger
+
+
+LogLevel = Literal["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]
+LOG_LEVELS: tuple[LogLevel, ...] = ("DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL")
+
+
+def _normalize_level(raw_level: str, default: LogLevel) -> LogLevel:
+    normalized = raw_level.upper()
+    if normalized in LOG_LEVELS:
+        return cast(LogLevel, normalized)
+    return default
 
 
 @dataclass
 class LoggingSettings:
     """Logging configuration."""
 
-    level: Literal["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"] = "INFO"
+    level: LogLevel = "INFO"
     console_format: str = (
         "<level>{level: <8}</level> | "
         "<cyan>{name}</cyan>:<cyan>{function}</cyan>:<cyan>{line}</cyan> - "
@@ -54,7 +65,7 @@ class LoggingSettings:
             LoggingSettings instance with values from environment
         """
         return cls(
-            level=os.getenv("LOG_LEVEL", "INFO").upper(),
+            level=_normalize_level(os.getenv("LOG_LEVEL", "INFO"), "INFO"),
         )
 
 

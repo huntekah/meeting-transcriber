@@ -5,7 +5,6 @@ High-quality post-processing using cold path pipeline with smart chunking.
 Handles long audio by splitting on silence boundaries.
 """
 
-import sys
 import time
 import tempfile
 import uuid
@@ -19,7 +18,6 @@ from tqdm import tqdm
 from ..core.config import settings
 from ..core.logging import logger
 from ..core.exceptions import TranscriptionError
-from ..utils.file_ops import get_project_root
 
 
 class ColdPathPostProcessor:
@@ -48,30 +46,10 @@ class ColdPathPostProcessor:
         if self.pipeline is not None:
             return
 
-        logger.info("Lazy-loading cold path pipeline...")
+        logger.info("Lazy-loading cold path pipeline via ModelManager...")
+        from .model_manager import ModelManager
 
-        # Add scripts directory to path
-        try:
-            repo_root = get_project_root()
-            scripts_dir = repo_root / "scripts"
-        except FileNotFoundError:
-            logger.warning("Could not find project root, using relative path")
-            scripts_dir = Path("scripts")
-
-        if str(scripts_dir) not in sys.path:
-            sys.path.insert(0, str(scripts_dir))
-
-        from cold_path_pipeline_v2 import ColdPathPipeline_MLX
-
-        self.pipeline = ColdPathPipeline_MLX(
-            whisper_model=settings.MLX_WHISPER_MODEL,
-            diarization_model=settings.DIARIZATION_MODEL,
-            hf_token=settings.HF_TOKEN,
-            use_diarization=True,
-            verbose=False,
-        )
-
-        logger.info("Cold path pipeline loaded")
+        self.pipeline = ModelManager().get_cold_pipeline()
 
     def _ensure_vad_model(self):
         """Lazy-load VAD model for chunking."""
@@ -104,7 +82,7 @@ class ColdPathPostProcessor:
         Strategy:
         1. If audio ≤ chunk_duration, process directly
         2. Otherwise, split at silence near chunk boundaries
-        3. Process each chunk with cold_path_pipeline_v2
+        3. Process each chunk with cold path pipeline
         4. Adjust timestamps and merge results
 
         Args:

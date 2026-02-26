@@ -89,7 +89,7 @@ async def main():
 
             # Show first segment with timestamps
             first_seg = result['segments'][0]
-            print(f"\n   First segment:")
+            print("\n   First segment:")
             print(f"     Time: {first_seg.get('start', 'N/A'):.1f}s - {first_seg.get('end', 'N/A'):.1f}s")
             print(f"     Text: {first_seg['text'][:100]}...")
 
@@ -104,11 +104,11 @@ async def main():
         # Also save markdown version
         md_file = output_dir / "transcript_recovered.md"
         with open(md_file, "w") as f:
-            f.write(f"# Meeting Transcript\n\n")
-            f.write(f"**Date:** 2026-02-25\n")
+            f.write("# Meeting Transcript\n\n")
+            f.write("**Date:** 2026-02-25\n")
             f.write(f"**Duration:** {result['duration']/3600:.2f} hours\n")
             f.write(f"**Language:** {result['language']}\n\n")
-            f.write(f"## Transcript\n\n")
+            f.write("## Transcript\n\n")
 
             for i, seg in enumerate(result['segments'], 1):
                 start = seg.get('start', 0)
@@ -122,7 +122,7 @@ async def main():
         print("\n" + "=" * 70)
         print("✅ MEETING RECOVERY SUCCESSFUL")
         print("=" * 70)
-        print(f"\nYour 1-hour meeting has been recovered!")
+        print("\nYour 1-hour meeting has been recovered!")
         print(f"  📄 JSON: {json_file}")
         print(f"  📝 Markdown: {md_file}")
         print(f"\nProcessing time: {hours}h {minutes}m {seconds}s")

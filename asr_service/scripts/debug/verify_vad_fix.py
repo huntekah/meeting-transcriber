@@ -11,7 +11,6 @@ VERIFICATION FLOW:
 """
 
 import asyncio
-import sys
 import time
 from pathlib import Path
 from asr_service.services.model_manager import ModelManager
@@ -69,14 +68,13 @@ async def main():
     print("          (This involves 120k+ VAD inference passes - may take 2-5 min)")
     print("─" * 70)
     start_time = time.time()
-    chunk_count = 0
 
     try:
         chunks = processor._find_silence_chunks(audio, sr, 300, 30)
         elapsed = time.time() - start_time
 
         print(f"\n✅ SUCCESS! VAD chunking completed in {elapsed:.1f}s")
-        print(f"   ✓ No dtype mismatches!")
+        print("   ✓ No dtype mismatches!")
         print(f"   ✓ Found {len(chunks)} chunks based on silence boundaries")
 
         # Show chunk breakdown
