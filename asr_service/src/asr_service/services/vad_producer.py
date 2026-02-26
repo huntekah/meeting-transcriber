@@ -40,7 +40,9 @@ class VADAudioProducer(AudioProducerBase):
         sample_rate: int | None = None,
         chunk_size: int | None = None,
         vad_threshold: float | None = None,
-        silence_chunks: int | None = None,
+        breath_silence_chunks: int | None = None,
+        semantic_silence_chunks: int | None = None,
+        max_utterance_seconds: float | None = None,
     ):
         """
         Initialize VAD audio producer.
@@ -55,7 +57,9 @@ class VADAudioProducer(AudioProducerBase):
             sample_rate: Sample rate in Hz (default from settings)
             chunk_size: Samples per chunk (default from settings)
             vad_threshold: Speech probability threshold (default from settings)
-            silence_chunks: Number of silence chunks to trigger finalization (default from settings)
+            breath_silence_chunks: Silence chunks for breath pause detection (default from settings)
+            semantic_silence_chunks: Silence chunks for sentence-end detection (default from settings)
+            max_utterance_seconds: Max buffer before forced commit (default from settings)
         """
         # Determine effective sample rate for parent initialization
         effective_sample_rate = sample_rate or settings.SAMPLE_RATE
@@ -75,7 +79,9 @@ class VADAudioProducer(AudioProducerBase):
         self.device_channels = device_channels
         self.chunk_size = chunk_size or settings.CHUNK_SIZE
         self.vad_threshold = vad_threshold or settings.VAD_THRESHOLD
-        self.silence_chunks = silence_chunks or settings.SILENCE_CHUNKS
+        self.breath_silence_chunks = breath_silence_chunks or settings.BREATH_SILENCE_CHUNKS
+        self.semantic_silence_chunks = semantic_silence_chunks or settings.SEMANTIC_SILENCE_CHUNKS
+        self.max_utterance_seconds = max_utterance_seconds or settings.MAX_UTTERANCE_SECONDS
 
         # VAD streaming buffer
         self._vad_stream = VADStreamingBuffer(
@@ -83,7 +89,9 @@ class VADAudioProducer(AudioProducerBase):
             sample_rate=self.sample_rate,
             vad_model=vad_model,
             vad_threshold=self.vad_threshold,
-            silence_chunks=self.silence_chunks,
+            breath_silence_chunks=self.breath_silence_chunks,
+            semantic_silence_chunks=self.semantic_silence_chunks,
+            max_utterance_seconds=self.max_utterance_seconds,
         )
 
         # Audio recording for final save

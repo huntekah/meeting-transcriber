@@ -30,8 +30,13 @@ class VADStreamingBuffer:
         sample_rate: int,
         vad_model: torch.nn.Module,
         vad_threshold: float | None = None,
-        silence_chunks: int | None = None,
+        # Two-tier silence thresholds
+        breath_silence_chunks: int | None = None,
+        semantic_silence_chunks: int | None = None,
+        max_utterance_seconds: float | None = None,
         min_audio_length: float | None = None,
+        # Deprecated: kept for backward compatibility (sets breath_silence_chunks)
+        silence_chunks: int | None = None,
     ):
         self.source_id = source_id
         self.sample_rate = sample_rate
@@ -39,11 +44,24 @@ class VADStreamingBuffer:
         self.vad_threshold = (
             settings.VAD_THRESHOLD if vad_threshold is None else vad_threshold
         )
-        self.silence_chunks = (
-            settings.SILENCE_CHUNKS if silence_chunks is None else silence_chunks
+        # If legacy silence_chunks is passed, collapse both thresholds to it (old behavior)
+        if silence_chunks is not None:
+            self.breath_silence_chunks = silence_chunks
+            self.semantic_silence_chunks = silence_chunks
+        else:
+            self.breath_silence_chunks = (
+                breath_silence_chunks if breath_silence_chunks is not None else settings.BREATH_SILENCE_CHUNKS
+            )
+            self.semantic_silence_chunks = (
+                semantic_silence_chunks if semantic_silence_chunks is not None else settings.SEMANTIC_SILENCE_CHUNKS
+            )
+        self.max_utterance_seconds = (
+            settings.MAX_UTTERANCE_SECONDS
+            if max_utterance_seconds is None
+            else max_utterance_seconds
         )
         self.min_audio_length = (
-            settings.MIN_AUDIO_LENGTH if min_audio_length is None else min_audio_length
+            settings.MIN_VALID_AUDIO_SECONDS if min_audio_length is None else min_audio_length
         )
 
         self._buffer_lock = threading.Lock()
@@ -52,9 +70,10 @@ class VADStreamingBuffer:
         self._silence_counter = 0
         self._commit_ready = False
         self._speech_start_time: float | None = None
+        self._force_commit_on_next_breath: bool = False
 
     def append_chunk(self, audio_chunk: np.ndarray) -> Dict[str, Any] | None:
-        """Append audio, run VAD, and return a finalized segment if ready."""
+        """Append audio, run VAD, and return a finalized segment only on semantic silence."""
         with self._buffer_lock:
             self._growing_buffer.append(audio_chunk)
 
@@ -77,12 +96,35 @@ class VADStreamingBuffer:
                 self._is_speaking = True
             if not self._commit_ready:
                 self._silence_counter = 0
+                # Check max-buffer safety valve
+                if self._get_buffer_seconds() >= self.max_utterance_seconds:
+                    logger.debug(
+                        f"[Source {self.source_id}] Buffer overflow "
+                        f"({self.max_utterance_seconds}s), will force-commit on next breath"
+                    )
+                    self._force_commit_on_next_breath = True
         else:
             if self._is_speaking and not self._commit_ready:
                 self._silence_counter += 1
-                if self._silence_counter >= self.silence_chunks:
+
+                # BREATH SILENCE: user paused briefly — only commit if overflow flag set
+                if self._silence_counter >= self.breath_silence_chunks:
+                    if self._force_commit_on_next_breath:
+                        logger.debug(
+                            f"[Source {self.source_id}] Force-commit on breath (buffer overflow)"
+                        )
+                        self._force_commit_on_next_breath = False
+                        self._commit_ready = True
+                        segment = self._finalize_segment()
+                        self._is_speaking = False
+                        self._silence_counter = 0
+                        return segment
+
+                # SEMANTIC SILENCE: user finished their thought — hard commit
+                if self._silence_counter >= self.semantic_silence_chunks:
                     logger.debug(
-                        f"[Source {self.source_id}] Speech END (silence chunks: {self._silence_counter})"
+                        f"[Source {self.source_id}] Semantic silence "
+                        f"({self._silence_counter} chunks), committing"
                     )
                     self._commit_ready = True
                     segment = self._finalize_segment()
@@ -91,6 +133,12 @@ class VADStreamingBuffer:
                     return segment
 
         return None
+
+    def _get_buffer_seconds(self) -> float:
+        """Return current buffer duration in seconds (caller must not hold _buffer_lock)."""
+        with self._buffer_lock:
+            total_samples = sum(len(c) for c in self._growing_buffer)
+        return total_samples / self.sample_rate
 
     def finalize_pending(self) -> Dict[str, Any] | None:
         """Force finalize any pending audio in the buffer."""
@@ -156,7 +204,9 @@ class VADStreamingBuffer:
             buffer_size = len(self._growing_buffer)
         return {
             "buffer_size": buffer_size,
+            "buffer_seconds": self._get_buffer_seconds(),
             "is_speaking": self._is_speaking,
             "silence_counter": self._silence_counter,
             "commit_ready": self._commit_ready,
+            "force_commit_on_next_breath": self._force_commit_on_next_breath,
         }
