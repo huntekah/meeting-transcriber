@@ -81,6 +81,7 @@ class LiveTranscriber:
         self._error_count = 0
         self._last_provisional_text = ""
         self._last_provisional_time = 0.0
+        self._rollover_audio: np.ndarray | None = None  # Prepended to next final segment
 
     def start(self):
         """Start consumer thread."""
@@ -97,6 +98,8 @@ class LiveTranscriber:
 
     def stop(self):
         """Gracefully stop consumer thread."""
+        self._rollover_audio = None  # Always clear to avoid stale state
+
         if self._thread is None:
             return
 
@@ -136,7 +139,7 @@ class LiveTranscriber:
 
     def _streaming_loop(self):
         """Inference loop with provisional updates while speaking."""
-        min_samples = int(settings.MIN_AUDIO_LENGTH * settings.SAMPLE_RATE)
+        min_samples = int(settings.PROVISIONAL_MIN_AUDIO_SECONDS * settings.SAMPLE_RATE)
         while not self._stop_event.is_set():
             try:
                 segment = self.input_queue.get_nowait()
@@ -213,9 +216,24 @@ class LiveTranscriber:
         capture_timestamp: float = segment["timestamp"]
         segment_start_time: float = segment.get("start_time", capture_timestamp)
 
-        min_samples = int(settings.MIN_AUDIO_LENGTH * settings.SAMPLE_RATE)
+        # Prepend any rolled-over audio from a previous short segment
+        if self._rollover_audio is not None:
+            audio_np = np.concatenate([self._rollover_audio, audio_np])
+            self._rollover_audio = None
+
+        min_samples = int(settings.MIN_VALID_AUDIO_SECONDS * settings.SAMPLE_RATE)
         if len(audio_np) < min_samples:
+            # Too short for reliable Whisper output — roll over to next segment
+            logger.debug(
+                f"[Source {self.source_id}] Short segment "
+                f"({len(audio_np) / settings.SAMPLE_RATE:.2f}s < "
+                f"{settings.MIN_VALID_AUDIO_SECONDS}s), rolling over"
+            )
+            self._rollover_audio = audio_np
             return
+
+        sample_rate = segment.get("sample_rate", settings.SAMPLE_RATE)
+        audio_duration = len(audio_np) / sample_rate
 
         start_time = time.time()
         result = self._transcribe(audio_np)
@@ -225,14 +243,19 @@ class LiveTranscriber:
             logger.debug(f"Empty transcription for source {self.source_id}, skipping")
             return
 
+        if self._is_hallucination(result, audio_duration):
+            logger.debug(
+                f"[Source {self.source_id}] Hallucination rejected: '{result['text']}'"
+            )
+            return
+
         if self._stop_event.is_set():
             logger.debug(
                 f"LiveTranscriber {self.source_id} stopping, skipping callback"
             )
             return
 
-        sample_rate = segment.get("sample_rate", settings.SAMPLE_RATE)
-        duration = len(audio_np) / sample_rate
+        duration = audio_duration
         end_timestamp = segment_start_time + duration
         utterance = Utterance(
             source_id=self.source_id,
@@ -256,6 +279,41 @@ class LiveTranscriber:
             f"Transcribed segment for source {self.source_id}: "
             f"'{result['text'][:50]}...' ({duration:.2f}s, RTF={inference_time / duration:.3f})"
         )
+
+    def _is_hallucination(self, result: Dict[str, Any], audio_duration_sec: float) -> bool:
+        """
+        3-factor heuristic to catch Whisper's silence-induced hallucinations.
+
+        Checks are only applied when the text matches a known artifact phrase,
+        so genuine utterances like "Thank you" in a real conversation are not rejected.
+        """
+        text = result.get("text", "").strip()
+        if not text:
+            return True
+
+        segments = result.get("segments", [])
+        max_no_speech_prob = max(
+            (seg.get("no_speech_prob", 0.0) for seg in segments), default=0.0
+        )
+
+        clean_text = text.lower()
+        is_known_artifact = any(
+            artifact.lower() in clean_text for artifact in settings.KNOWN_HALLUCINATIONS
+        )
+
+        if not is_known_artifact:
+            return False
+
+        # Factor 1: Whisper's own no_speech signal is high
+        if max_no_speech_prob > 0.4:
+            return True
+
+        # Factor 2: Audio is much longer than the text warrants
+        # (e.g., 5s of shuffling paper → "Thank you.")
+        if audio_duration_sec > 2.5 and len(clean_text) < 15:
+            return True
+
+        return False
 
     def _handle_transcription_error(self, error: TranscriptionError) -> None:
         """Log and emit an error utterance."""
@@ -316,13 +374,13 @@ class LiveTranscriber:
                             verbose=False,
                         )
 
-            # Extract text from segments
+            # Extract text and segments (segments carry no_speech_prob per chunk)
             segments = result.get("segments", [])
             text = " ".join(
                 [seg["text"].strip() for seg in segments if seg["text"].strip()]
             )
 
-            return {"text": text, "confidence": 1.0}  # MLX doesn't provide confidence
+            return {"text": text, "segments": segments, "confidence": 1.0}
 
         except (ImportError, RuntimeError, ValueError, OSError) as e:
             logger.error(

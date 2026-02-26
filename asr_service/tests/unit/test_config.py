@@ -53,3 +53,48 @@ def test_get_device_respects_explicit_setting(monkeypatch):
 
     settings = Settings()
     assert settings.get_device() == "cpu"
+
+
+def test_new_audio_defaults():
+    """New two-tier silence constants must have the expected default values."""
+    s = Settings()
+
+    assert s.BREATH_SILENCE_CHUNKS == 15
+    assert s.SEMANTIC_SILENCE_CHUNKS == 45
+    assert s.MAX_UTTERANCE_SECONDS == 15.0
+    assert s.MIN_VALID_AUDIO_SECONDS == 1.0
+
+
+def test_known_hallucinations_is_non_empty_list():
+    """KNOWN_HALLUCINATIONS must be a non-empty list of strings."""
+    s = Settings()
+
+    assert isinstance(s.KNOWN_HALLUCINATIONS, list)
+    assert len(s.KNOWN_HALLUCINATIONS) > 0
+    assert all(isinstance(item, str) for item in s.KNOWN_HALLUCINATIONS)
+
+
+def test_silence_chunks_property_alias():
+    """SILENCE_CHUNKS property must return BREATH_SILENCE_CHUNKS."""
+    s = Settings()
+    assert s.SILENCE_CHUNKS == s.BREATH_SILENCE_CHUNKS
+
+
+def test_min_audio_length_property_alias():
+    """MIN_AUDIO_LENGTH property must return MIN_VALID_AUDIO_SECONDS."""
+    s = Settings()
+    assert s.MIN_AUDIO_LENGTH == s.MIN_VALID_AUDIO_SECONDS
+
+
+def test_semantic_silence_greater_than_breath():
+    """SEMANTIC_SILENCE_CHUNKS must always be > BREATH_SILENCE_CHUNKS to make
+    the two-tier logic meaningful."""
+    s = Settings()
+    assert s.SEMANTIC_SILENCE_CHUNKS > s.BREATH_SILENCE_CHUNKS
+
+
+def test_provisional_min_less_than_valid_audio():
+    """PROVISIONAL_MIN_AUDIO_SECONDS must be < MIN_VALID_AUDIO_SECONDS.
+    Provisional is speculative (lower latency); final commits need more evidence."""
+    s = Settings()
+    assert s.PROVISIONAL_MIN_AUDIO_SECONDS < s.MIN_VALID_AUDIO_SECONDS

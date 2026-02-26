@@ -239,6 +239,65 @@ class TestDeviceSelector:
                 assert default_device.device_index == 1
 
 
+class TestDeviceSelectorNameBased:
+    """DeviceSelector pre-selects by device name, not by index."""
+
+    def _make_devices(self):
+        return [
+            AudioDevice(device_index=0, name="MacBook Pro Microphone", channels=1, sample_rate=48000, is_default=True),
+            AudioDevice(device_index=1, name="Jabra Evolve2", channels=1, sample_rate=48000, is_default=False),
+            AudioDevice(device_index=-1, name="System Audio (ScreenCaptureKit)", channels=1, sample_rate=16000, is_default=False),
+        ]
+
+    def test_set_devices_preselects_by_name(self):
+        """When pre_select_name matches a device, that device's index is selected."""
+        from unittest.mock import patch, PropertyMock
+
+        selector = DeviceSelector()
+        devices = self._make_devices()
+
+        with patch.object(selector, "set_options"):
+            with patch.object(type(selector), "value", new_callable=PropertyMock) as mock_value:
+                selector.set_devices(devices, select_default=False, pre_select_name="Jabra Evolve2")
+                mock_value.assert_called_with(1)
+
+    def test_set_devices_preselects_screencapture_by_name(self):
+        """ScreenCaptureKit sentinel (index=-1) is found by name match."""
+        from unittest.mock import patch, PropertyMock
+
+        selector = DeviceSelector()
+        devices = self._make_devices()
+
+        with patch.object(selector, "set_options"):
+            with patch.object(type(selector), "value", new_callable=PropertyMock) as mock_value:
+                selector.set_devices(devices, select_default=False, pre_select_name="System Audio (ScreenCaptureKit)")
+                mock_value.assert_called_with(-1)
+
+    def test_set_devices_name_not_found_no_crash(self):
+        """Unknown name → no selection attempted, no exception raised."""
+        from unittest.mock import patch, PropertyMock
+
+        selector = DeviceSelector()
+        devices = self._make_devices()
+
+        with patch.object(selector, "set_options"):
+            with patch.object(type(selector), "value", new_callable=PropertyMock) as mock_value:
+                selector.set_devices(devices, select_default=False, pre_select_name="Ghost Device")
+                mock_value.assert_not_called()
+
+    def test_set_devices_name_none_falls_back_to_default(self):
+        """pre_select_name=None with select_default=True picks the is_default device."""
+        from unittest.mock import patch, PropertyMock
+
+        selector = DeviceSelector()
+        devices = self._make_devices()
+
+        with patch.object(selector, "set_options"):
+            with patch.object(type(selector), "value", new_callable=PropertyMock) as mock_value:
+                selector.set_devices(devices, select_default=True, pre_select_name=None)
+                mock_value.assert_called_with(0)  # MacBook Pro Microphone is_default=True
+
+
 class TestLiveTranscriptView:
     """Test LiveTranscriptView widget."""
 

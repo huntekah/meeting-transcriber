@@ -8,7 +8,6 @@ Outputs audio segments to queue for transcription.
 import subprocess  # nosec B404
 import threading
 import queue
-import time
 from typing import Dict, Any
 import numpy as np
 import torch
@@ -88,6 +87,7 @@ class ScreenCaptureAudioProducer(AudioProducerBase):
             source_id=source_id,
             sample_rate=self.sample_rate,
             vad_model=vad_model,
+            # Uses BREATH_SILENCE_CHUNKS, SEMANTIC_SILENCE_CHUNKS, MAX_UTTERANCE_SECONDS from settings
         )
         self._vad_chunk_buffer = np.array([], dtype=np.float32)
 
@@ -256,7 +256,7 @@ class ScreenCaptureAudioProducer(AudioProducerBase):
                         if self._stop_event.is_set():
                             logger.debug(
                                 f"EOF reached for source {self.source_id} after stop request, "
-                                f"finalizing {len(buffer)} remaining samples"
+                                f"finalizing remaining samples"
                             )
                         else:
                             returncode = self._process.poll()

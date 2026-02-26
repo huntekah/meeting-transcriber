@@ -43,10 +43,35 @@ class Settings(BaseSettings):
     SAMPLE_RATE: int = 16000  # Hz
     CHUNK_SIZE: int = 512  # Samples per chunk (32ms at 16kHz)
     VAD_THRESHOLD: float = 0.5  # Speech probability threshold
-    SILENCE_CHUNKS: int = 15  # ~480ms silence triggers finalization
-    MIN_AUDIO_LENGTH: float = 0.5  # Minimum seconds before transcription
+
+    # Two-tier silence detection
+    BREATH_SILENCE_CHUNKS: int = 15   # ~480ms — keep accumulating (user took a breath)
+    SEMANTIC_SILENCE_CHUNKS: int = 45  # ~1.44s — hard commit (user finished their thought)
+    MAX_UTTERANCE_SECONDS: float = 15.0  # Force commit if buffer grows this long
+    MIN_VALID_AUDIO_SECONDS: float = 1.0  # Roll over instead of transcribing if shorter
+    PROVISIONAL_MIN_AUDIO_SECONDS: float = 0.3  # Minimum audio before first provisional preview fires
+
+    # Deprecated aliases (kept for backward compatibility)
+    @property
+    def SILENCE_CHUNKS(self) -> int:  # noqa: N802
+        return self.BREATH_SILENCE_CHUNKS
+
+    @property
+    def MIN_AUDIO_LENGTH(self) -> float:  # noqa: N802
+        return self.MIN_VALID_AUDIO_SECONDS
+
     PROVISIONAL_INTERVAL: float = 0.2  # Seconds between provisional updates
     SCREENCAPTURE_MAX_DURATION_SECONDS: int = 86400  # 24 hours
+
+    # Known Whisper hallucination artifacts (checked against finalized segments)
+    KNOWN_HALLUCINATIONS: List[str] = [
+        "Thank you.",
+        "Thank you",
+        "Bye.",
+        "Thanks for watching.",
+        "you",
+        ".",
+    ]
 
     # Cold path settings
     COLD_PATH_CHUNK_DURATION: int = 300  # 5 minutes in seconds

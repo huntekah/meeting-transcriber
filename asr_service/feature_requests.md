@@ -3,10 +3,9 @@
                                                                                     
 1. When choosing audio source user has no idea which sources in his computer actually process audio. Can we Show visual indicator,     of the actual audio loudness being processed? (eg with moving bars, or something). This would make it a lot easier for the user to     actually know which sources he can try.                                                                                            
 2. A silence at the beginning of the video is captured as 'Thank you' for some random reason.                                      
-3. Fragmented transcript in live view might need to be consolidated every 10s or so.                                               
-4. How to make the transcript update faster? scripts/live_test_v2.py is able to blazingly fast show the 'approximate' audio, before     replacing it with the better one. Can we do that in service as well?                                                              
 5. Ability to change audio sources mid-recording. people can take off headphones, or change microphone. we dont want to force them     for a re-boot of the meeting recording. 
 6. Startup health check per audio source: after starting each pipeline, verify audio chunks arrive within ~2s and warn/fail fast if a source produces nothing. Add per-source chunk counts to session stats and transcript metadata. Add live "receiving audio ✓/✗" indicator per source in the CLI frontend during recording. Pipe Swift subprocess stderr into the Python logger so ScreenCaptureKit errors surface immediately instead of silently.
+7. Short/soft words don't appear until more speech follows. Single isolated words ("test") in mostly-silent audio produce empty or hallucinated Whisper output which is silently dropped, losing speech context. Fix: roll over on empty/hallucination result instead of dropping audio.
 
 ## 1. Visual Audio Loudness Indicator
 
@@ -81,103 +80,6 @@ Likely due to:
 
 ---
 
-## 3. Consolidate Fragmented Transcripts Every 10 Seconds
-
-**Description:**
-Works **alongside** feature #4 (not instead of it). After fast approximate text is shown and replaced with final utterances, periodically consolidate those utterances into logical blocks for better readability. No new ASR work needed—just grouping/joining existing utterances every ~10 seconds (can be more frequent since it's pure text manipulation).
-
-**Flow:**
-1. Feature #4 shows fast approximate text immediately → User sees words appear instantly
-2. Feature #4 replaces with final VAD-completed utterance → Text becomes accurate
-3. Feature #3 consolidates: every 10s, group multiple short utterances into longer readable blocks
-
-**User Problem:**
-Even with Feature #4's fast updates, the transcript still feels fragmented because users see many individual utterances appearing one at a time. Consolidation groups related utterances, making the transcript easier to scan and understand context (reads like prose, not a list of fragments).
-
-**Example:**
-Without consolidation:
-```
-- [00:02] SPEAKER_00: "Welcome everyone"
-- [00:04] SPEAKER_00: "to the meeting today"
-- [00:07] SPEAKER_01: "Thanks for having me"
-- [00:10] SPEAKER_01: "I'm excited to be here"
-```
-
-With consolidation (every 10s):
-```
-- [00:02-00:07] SPEAKER_00: "Welcome everyone to the meeting today"
-- [00:07-00:10] SPEAKER_01: "Thanks for having me. I'm excited to be here"
-```
-
-**Suggested Implementation:**
-- Add a `TranscriptConsolidator` class in `services/`
-- Listen to utterance stream (from feature #4)
-- Every 10s (or configurable interval), group consecutive utterances from same speaker
-- Join text with spaces, keep first start_time and last end_time
-- Send consolidated utterances via WebSocket to frontend
-- Frontend displays consolidated blocks instead of individual utterances
-- Can run even more frequently if CPU allows (consolidation is just string joining, no ASR)
-
-**Estimate:**
-- **Backend:** 3-4 hours (consolidator logic, timer/interval management, testing)
-- **Frontend:** 1-2 hours (display consolidated blocks, handle updates)
-- **Testing:** 1-2 hours (timing, edge cases, speaker changes)
-- **Total:** 5-8 hours | **1 day**
-
-**Risks/Considerations:**
-- Consolidation interval should be configurable (10s may not be optimal for all use cases)
-- Need to decide: consolidate by speaker? by time window? by sentence end? (recommend speaker grouping)
-- Very low CPU impact (just text joining), can run frequently
-- Frontend needs to handle replacing individual utterances with consolidated blocks smoothly
-- Requires Feature #4 to be implemented first (prerequisite)
-
----
-
-## 4. Faster Transcript Updates (Approximate First, Then Better)
-
-**Description:**
-Currently, transcription updates arrive only after the VAD detects speech end. Implement a "streaming" approach: show approximate/preliminary transcript immediately as audio is being captured, then replace with higher-quality final transcription once VAD completes.
-
-**User Problem:**
-Users wait for speech to end before seeing any transcript. With streaming, they'd see approximate text appear in real-time, making the experience feel faster and more responsive (like live captions).
-
-**Technical Approach (Proven in scripts/live_test_v2.py):**
-`scripts/live_test_v2.py` already demonstrates this using **MLX-Whisper** (same model we use):
-- **Provisional passes**: While speaking, transcribe the *growing* audio buffer every 300ms
-- **Finalization pass**: When VAD detects speech end, transcribe once more for final quality
-- Uses same model for both passes (no model switching needed)
-- Fast feeling comes from partial audio + high-frequency updates, not streaming inference
-
-**Suggested Implementation (Recommended):**
-- Adapt the `live_test_v2.py` pattern into `live_transcriber.py`
-- Keep using `mlx-whisper` (no model switch needed)
-- Add provisional transcription loop: every 300ms while speaking
-- Keep final transcription: when VAD completes
-- Send preliminary transcripts with `is_final=False` flag
-- Replace with final transcripts when VAD completes
-- Reuse VAD's `commit_ready` state from producer to coordinate timing
-
-**Estimate:**
-- **Dependency audit:** 2 hours (test faster-whisper performance vs mlx-whisper)
-- **Backend refactoring:** 6-8 hours (swap transcriber, handle streaming, manage preliminary vs final)
-- **Frontend:** 2-3 hours (UI to show preliminary text differently, replace on final)
-- **Testing:** 4-5 hours (latency testing, quality comparison, edge cases)
-- **Total:** 14-18 hours | **3-4 days**
-
-**Alternative (Option B - Safer but slower):**
-- Transcribe every 1s of buffered audio (even if silence/incomplete)
-- Show as preliminary (`is_final=False`)
-- Replace when VAD ends
-- Effort: 8-10 hours, but with possible repetition of text
-
-**Risks/Considerations:**
-- `faster-whisper` may be faster but potentially lower quality than `mlx-whisper`
-- Switching models requires re-benchmarking performance
-- May need to adjust confidence thresholds for preliminary detection
-- Could increase CPU usage with more frequent transcription
-
----
-
 ## 5. Change Audio Sources Mid-Recording
 
 **Description:**
@@ -245,10 +147,9 @@ This requires significant architectural changes:
 |---------|--------|----------|-----------|------|----------|-------|
 | 1. Audio Loudness Indicator | 9-12 hrs | 2-3 days | Medium | Low | High | Independent |
 | 2. Fix Silence Hallucination | 9-12 hrs | 2-3 days | Medium | Medium | High | Independent |
-| 3. Consolidate Transcripts | 5-8 hrs | 1 day | Low | Low | Medium | **Depends on #4** |
-| 4. Streaming Approx Transcripts | 14-18 hrs | 3-4 days | High | Medium | Medium | **Prerequisite for #3** |
 | 5. Dynamic Audio Sources | 34-45 hrs | 1-2 weeks | Very High | High | Low | Independent (complex) |
 | 6. Audio Source Health Check | 8-12 hrs | 2 days | Medium | Low | High | Independent |
+| 7. Content-Aware Rollover | ~2 hrs | < 1 day | Low | Very Low | High | Independent |
 
 ---
 
@@ -295,16 +196,76 @@ A user can select screen capture + microphone, start recording a meeting, and on
 
 ---
 
+## 7. Content-Aware Rollover (Short/Soft Speech Context Preservation)
+
+**Description:**
+When a finalized audio segment produces an empty transcription or a hallucination-rejected result, roll the audio forward into the next segment instead of silently discarding it. This allows Whisper to accumulate enough speech context across multiple short utterances to produce a confident transcription.
+
+**User Problem:**
+Single short words ("test", "yes", "ok") spoken softly or in isolation are followed by 1.44s of silence, causing a semantic-silence commit. The resulting segment is mostly silence (~78% silence for a 0.3s word + 1.44s pause). Whisper either returns empty or hallucinates "." — both paths currently drop the audio. The user sees nothing. Only when subsequent richer speech arrives does text appear, and the earlier words may be lost entirely rather than included.
+
+**Root Cause:**
+`_handle_final_segment` in `live_transcriber.py` has two silent-drop paths:
+```python
+if not result["text"].strip():
+    return  # audio lost
+
+if self._is_hallucination(result, audio_duration):
+    return  # audio lost
+```
+The rollover mechanism only activates on audio *duration* < `MIN_VALID_AUDIO_SECONDS`. It does not trigger on failed transcription content.
+
+**Proposed Fix:**
+Change both silent-drop paths to roll the audio over, capped at `MAX_UTTERANCE_SECONDS` to prevent unbounded growth:
+
+```python
+if not result["text"].strip():
+    self._rollover_audio = audio_np[-max_rollover_samples:]
+    return
+
+if self._is_hallucination(result, audio_duration):
+    self._rollover_audio = audio_np[-max_rollover_samples:]
+    return
+```
+
+Since `audio_np` at that point already includes any previously rolled-over audio (prepended at the top of the function), this naturally chains: each failed attempt passes its full accumulated context to the next segment.
+
+**Effect:**
+```
+"test" (soft) → Whisper: "" → ROLLOVER (1.74s saved)
+"test" (soft) → prepend 1.74s → 3.48s total → Whisper: "" → ROLLOVER (3.48s saved)
+"huh interesting" → prepend 3.48s → 6s → Whisper: "test test huh interesting" ✓
+```
+
+**Suggested Implementation:**
+- `live_transcriber.py`: `_handle_final_segment` — ~6 lines changed (2 bare `return`s → rollover with cap)
+- `live_transcriber.py`: add `_max_rollover_samples` property or compute inline from `MAX_UTTERANCE_SECONDS`
+- `tests/backend/test_live_transcriber.py`: ~10 lines of new tests covering rollover-on-empty and rollover-on-hallucination paths
+
+No config changes needed — reuses `MAX_UTTERANCE_SECONDS = 15.0`.
+
+**Estimate:**
+- **Backend change:** 1 hour (`_handle_final_segment`, 2 paths + cap logic)
+- **Tests:** 1 hour (2 new test cases, update 1-2 existing assertions)
+- **Total:** ~2 hours | **< 1 day**
+
+**Risks/Considerations:**
+- Rollover cap (15s) prevents memory growth; the `MAX_UTTERANCE_SECONDS` constant already exists for this purpose
+- Rolled-over audio includes trailing silence from previous segment; Whisper handles leading silence well so this is acceptable
+- Very aggressive speech (never empty/hallucinated) is unaffected — rollover only triggers on failed paths
+- May cause a slight increase in final segment audio length for edge cases, but this is intentional
+
+---
+
 ## Recommended Implementation Order
 
-1. **First Sprint (3-4 days):**
+1. **Quick Win (< 1 day):**
+   - Feature #7: Content-Aware Rollover (tiny change, high impact for soft/short speech)
+
+2. **First Sprint (3-4 days):**
    - Feature #1: Audio Loudness Indicator (improves UX immediately)
    - Feature #2: Fix Silence Hallucination (improves quality)
-
-2. **Second Sprint (4-5 days):**
-   - Feature #4: Streaming Approx Transcripts (prerequisite for #3)
-   - Feature #3: Consolidate Transcripts (improves readability, builds on #4)
-   - *These should be done together since #3 depends on #4*
+   - Feature #6: Audio Source Health Check (independent, quick win)
 
 3. **Future (1-2 weeks, lower priority):**
    - Feature #5: Dynamic Audio Sources (high complexity, lower user demand)
@@ -313,10 +274,9 @@ A user can select screen capture + microphone, start recording a meeting, and on
 
 ## Dependencies & Blockers
 
-- **Feature #3 depends on:** Feature #4 (must implement streaming approx transcripts first)
-- **Feature #4 depends on:** Careful testing of `faster-whisper` vs `mlx-whisper` trade-offs
 - **Feature #5 depends on:** Complete refactoring of session/pipeline architecture
 - **Feature #6 depends on:** Nothing — fully independent, good candidate for next sprint
+- **Feature #7 depends on:** Nothing — fully independent, < 1 day, no risk
 - **Feature #1 may impact:** CPU usage during setup (need to monitor)
 - **Feature #2 requires:** Dataset of real recordings to tune thresholds
 

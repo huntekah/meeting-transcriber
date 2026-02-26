@@ -88,18 +88,18 @@ class SetupScreen(Screen):
                     f"  [{d.device_index}] {d.name} ({d.channels}ch, {d.sample_rate}Hz) - source_type={d.source_type}"
                 )
 
-            # Load saved device selections
-            saved_mic_idx, saved_system_idx = persistence.load_device_selection()
+            # Load saved device selections (by name — robust against index shifts)
+            saved_mic_name, saved_system_name = persistence.load_device_selection()
             logger.debug(
-                f"Loaded saved selections: mic={saved_mic_idx}, system={saved_system_idx}"
+                f"Loaded saved selections: mic={saved_mic_name}, system={saved_system_name}"
             )
 
             # Populate microphone selector
             mic_selector = self.query_one("#mic_selector", DeviceSelector)
             mic_selector.set_devices(
                 self.devices,
-                select_default=(saved_mic_idx is None),
-                pre_select_index=saved_mic_idx,
+                select_default=(saved_mic_name is None),
+                pre_select_name=saved_mic_name,
             )
 
             # Populate system audio selector
@@ -107,7 +107,7 @@ class SetupScreen(Screen):
             system_selector.set_devices(
                 self.devices,
                 select_default=False,
-                pre_select_index=saved_system_idx,
+                pre_select_name=saved_system_name,
             )
 
             status.update(f"✓ Found {len(self.devices)} audio device(s)")
@@ -144,9 +144,12 @@ class SetupScreen(Screen):
 
         # Build sources list
         sources = []
+        mic_device_name = None
+        system_device_name = None
         if mic_idx is not None:
             device = next((d for d in self.devices if d.device_index == mic_idx), None)
             if device:
+                mic_device_name = device.name
                 sources.append(
                     SourceConfig(
                         device_index=mic_idx,
@@ -161,6 +164,7 @@ class SetupScreen(Screen):
                 (d for d in self.devices if d.device_index == system_idx), None
             )
             if device:
+                system_device_name = device.name
                 sources.append(
                     SourceConfig(
                         device_index=system_idx,
@@ -174,11 +178,11 @@ class SetupScreen(Screen):
             status.update("❌ Invalid device selection")
             return
 
-        # Save device selections for next time
-        persistence.save_device_selection(mic_idx, system_idx)
+        # Save device selections by name for next time (robust against index shifts)
+        persistence.save_device_selection(mic_device_name, system_device_name)
         persistence.save_output_dir(output_dir)
         logger.debug(
-            f"Saved device selection: mic={mic_idx}, system={system_idx}, output={output_dir}"
+            f"Saved device selection: mic={mic_device_name}, system={system_device_name}, output={output_dir}"
         )
 
         # Create session

@@ -23,44 +23,44 @@ class SettingsPersistence:
         self.config_dir.mkdir(parents=True, exist_ok=True)
 
     def save_device_selection(
-        self, mic_device_index: int | None, system_device_index: int | None
+        self, mic_device_name: str | None, system_device_name: str | None
     ):
         """
         Save device selection to config file.
 
         Args:
-            mic_device_index: Selected microphone device index (or None)
-            system_device_index: Selected system audio device index (or None)
+            mic_device_name: Selected microphone device name (or None)
+            system_device_name: Selected system audio device name (or None)
         """
         try:
             # Load existing settings
             settings = self._load_raw_settings()
 
-            # Update device selections
-            settings["mic_device_index"] = mic_device_index
-            settings["system_device_index"] = system_device_index
+            # Update device selections by name (robust against index shifts)
+            settings["mic_device_name"] = mic_device_name
+            settings["system_device_name"] = system_device_name
 
             # Save to file
             self._save_raw_settings(settings)
             logger.debug(
-                f"Saved device selection: mic={mic_device_index}, system={system_device_index}"
+                f"Saved device selection: mic={mic_device_name}, system={system_device_name}"
             )
         except Exception as e:
             logger.error(f"Failed to save device selection: {e}", exc_info=True)
 
-    def load_device_selection(self) -> tuple[int | None, int | None]:
+    def load_device_selection(self) -> tuple[str | None, str | None]:
         """
         Load saved device selection from config file.
 
         Returns:
-            Tuple of (mic_device_index, system_device_index) or (None, None) if not found
+            Tuple of (mic_device_name, system_device_name) or (None, None) if not found
         """
         try:
             settings = self._load_raw_settings()
-            mic_idx = settings.get("mic_device_index")
-            system_idx = settings.get("system_device_index")
-            logger.debug(f"Loaded device selection: mic={mic_idx}, system={system_idx}")
-            return mic_idx, system_idx
+            mic_name = settings.get("mic_device_name")
+            system_name = settings.get("system_device_name")
+            logger.debug(f"Loaded device selection: mic={mic_name}, system={system_name}")
+            return mic_name, system_name
         except Exception as e:
             logger.error(f"Failed to load device selection: {e}")
             return None, None
