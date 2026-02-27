@@ -150,6 +150,8 @@ This requires significant architectural changes:
 | 5. Dynamic Audio Sources | 34-45 hrs | 1-2 weeks | Very High | High | Low | Independent (complex) |
 | 6. Audio Source Health Check | 8-12 hrs | 2 days | Medium | Low | High | Independent |
 | 7. Content-Aware Rollover | ~2 hrs | < 1 day | Low | Very Low | High | Independent |
+| 8a. BYT Pane — UI Phase | 10-14 hrs | 2-3 days | Medium | Low | High | Depends on 8b API contract |
+| 8b. BYT Pane — LLM Service Phase | 8-12 hrs | 2 days | Medium | Medium | High | Independent of 8a |
 
 ---
 
@@ -288,3 +290,178 @@ No config changes needed — reuses `MAX_UTTERANCE_SECONDS = 15.0`.
 - Consider adding feature flags for gradual rollout
 - Test on multiple machines with different hardware (mic quality varies)
 - Get user feedback early and often (these are UX improvements)
+
+---
+
+## 8. BYT Pane — Live Transcript Insights (LLM-Powered)
+
+**Description:**
+During an active recording, show a live AI insights panel ("BYT" — Polish: *Byt*, meaning *Being / Entity*) side-by-side with the existing transcript. The panel provides four rotating LLM-generated insight views fed from the current session's transcript. A context window slider lets the user control how much history is sent to the model.
+
+**User Problem:**
+The raw transcript RichLog is good for reference, but gives no higher-order understanding during the meeting. Users want to immediately see what the code being discussed looks like, what the emotional dynamic is, what knowledge points emerged, or get a quick summary when joining late or returning from distraction — all without leaving the recording screen.
+
+**Layout:**
+
+```
+┌─ RecordingScreen ──────────────────────────────────────────────────┐
+│ StatusBar (top)                                                    │
+│                                                                    │
+│ ┌── Horizontal ─────────────────────────────────────────────────┐  │
+│ │  ┌─ TranscriptView (~70%) ──┐  ┌─ BYT Pane (~30%) ─────────┐ │  │
+│ │  │  RichLog (unchanged)     │  │ [🎭][💻][🧠][🚨]  sub-tabs │ │  │
+│ │  │                          │  │ ┌───────────────────────┐  │ │  │
+│ │  │                          │  │ │   Markdown output     │  │ │  │
+│ │  │                          │  │ └───────────────────────┘  │ │  │
+│ │  │                          │  │ [↻ Refresh]  ─●── slider  │ │  │
+│ │  └──────────────────────────┘  └────────────────────────────┘ │  │
+│ └───────────────────────────────────────────────────────────────┘  │
+│  LiveTranscriptView (100% width, always visible)                   │
+│  Controls (bottom dock)                                            │
+└────────────────────────────────────────────────────────────────────┘
+```
+
+**Insight Tabs:**
+
+| Tab | `insight_type` | Purpose |
+|-----|----------------|---------|
+| 🎭 Emotion Translate | `emotion_translate` | Detect emotional tones, translate between communication styles |
+| 💻 Code | `code` | Surface code snippets, technical decisions, debug traces mentioned verbally |
+| 🧠 Knowledge | `knowledge` | Key facts, named entities, open questions, action items |
+| 🚨 Panic Mode | `panic_mode` | Rolling summary of the selected context window — perfect for joining late |
+
+Each tab renders its response as **GitHub-flavoured Markdown** using Textual's built-in `Markdown` widget.
+
+**Context Window Slider** (in BYT pane footer):
+
+| Label | Utterances sent |
+|-------|-----------------|
+| 1m | Last 1 minute |
+| 3m | Last 3 minutes |
+| 5m | Last 5 minutes *(default)* |
+| 10m | Last 10 minutes |
+| 30m | Last 30 minutes |
+| Full | Entire session |
+
+Changing the slider invalidates the cache for the active insight tab and shows a stale-data indicator.
+
+**"Zen Mode" Hotkey Toggles:**
+
+| Hotkey | Effect |
+|--------|--------|
+| `Ctrl+T` | Toggle Transcript panel visibility (BYT expands to 100% width) |
+| `Ctrl+B` | Toggle BYT panel visibility (Transcript expands to 100% width) |
+
+`LiveTranscriptView` (provisional line) remains visible at all times regardless of toggle state.
+
+**Refresh Triggers:**
+- Sub-tab switch → auto-fetch if cache is empty for that insight type
+- `↻ Refresh` button → refresh active sub-tab immediately
+- Auto-timer → every N seconds (configurable `insight_auto_refresh_seconds`, default 60, 0 = off); only fires when BYT pane is visible
+- Recording stop → final refresh of the currently visible insight tab
+
+**Architecture — Frontend Direct (Option C):**
+The Textual frontend formats the accumulated utterance list into timestamped plain text and calls the `llm-insights-service` directly via HTTP. Zero changes to the ASR backend. Two-service topology.
+
+```
+CLI Frontend  ──POST /insights──►  llm-insights-service (port 8001)
+     │                                      │
+     │ (WebSocket, unchanged)               │ (Ollama / Gemini)
+     ▼                                      ▼
+ASR Service                           LLM model
+```
+
+---
+
+### Phase 8a — UI Phase
+
+**Goal:** Ship the full BYT pane UI against a mock/stub insights service. The frontend can be developed and tested independently of the real LLM.
+
+**Changes:**
+
+| File | Action | Description |
+|------|--------|-------------|
+| `src/cli_frontend/widgets/byt_pane.py` | **CREATE** | `BytPane` widget: `TabbedContent` with 4 sub-tabs (each: `Markdown` + `LoadingIndicator`), footer with `↻ Refresh` button and context window `Select`/`Slider`. Owns auto-refresh `set_interval` timer. Caches content per `InsightType`. |
+| `src/cli_frontend/api/insights_client.py` | **CREATE** | Async `httpx` client: `POST /insights {transcript, insight_type, window_minutes}` → `{markdown}`. 60 s timeout. |
+| `src/cli_frontend/models.py` | **MODIFY** | Add `InsightType(str, Enum)`, `InsightRequest`, `InsightResponse`. |
+| `src/cli_frontend/config.py` | **MODIFY** | Add `insights_service_url` (default `http://localhost:8001`), `insight_auto_refresh_seconds` (default `60`), `insight_context_minutes` (default `5`). |
+| `src/cli_frontend/screens/recording.py` | **MODIFY** | Wrap `TranscriptView` + `BytPane` in `Horizontal`. Keep `LiveTranscriptView` below. Add `ctrl+t` / `ctrl+b` BINDINGS. Accumulate utterances in `self._utterances`. Implement `_fetch_insight(insight_type)` and `_format_transcript_window(minutes)`. |
+| `src/cli_frontend/app.tcss` | **MODIFY** | Styles for `Horizontal` split, `BytPane` container, sub-tab bar, `Markdown` content area, `LoadingIndicator`, footer controls, `.hidden` reflow. |
+
+**Estimate:**
+- `BytPane` widget (tabs, cache, timer, loading state): 4-5 hrs
+- `InsightsClient` + models + config: 1 hr
+- `RecordingScreen` wiring (layout, toggle hotkeys, utterance accumulation, fetch logic): 3-4 hrs
+- CSS/styling: 2-3 hrs
+- Manual integration test against stub/mock: 1 hr
+- **Total: 11-14 hrs | 2-3 days**
+
+**Risks:**
+- Textual's `Markdown` widget has limited CSS customisation — long code blocks may wrap awkwardly at narrow widths; mitigated by `Ctrl+B` focus mode
+- `set_interval` timer must be properly cancelled on screen unmount to avoid leaked callbacks
+
+---
+
+### Phase 8b — LLM Service Phase
+
+**Goal:** Implement the standalone `llm-insights-service` that accepts a transcript + insight type and returns rendered Markdown from an LLM.
+
+**New package: `src/llm_insights_service/`**
+
+```
+src/llm_insights_service/
+├── __init__.py
+├── main.py       # FastAPI app on port 8001; POST /insights, GET /health
+├── schemas.py    # InsightType enum, InsightRequest, InsightResponse
+├── service.py    # InsightService.generate_insight() — async LLM call
+└── prompts.py    # System prompt dict keyed by InsightType (placeholder content)
+```
+
+**API contract:**
+```
+POST /insights
+{
+  "transcript": "[10:04:01] Source 0: we should refactor...",
+  "insight_type": "code",
+  "window_minutes": 5        // optional; informational only, slicing done by frontend
+}
+
+200 OK
+{
+  "markdown": "## Code Discussion\n...",
+  "insight_type": "code",
+  "token_count": 387
+}
+```
+
+**LLM backend** — pluggable via `LLM_PROVIDER` env var:
+
+| Value | Backend | Auth |
+|-------|---------|------|
+| `ollama` *(default)* | `POST http://localhost:11434/api/generate` | None |
+| `gemini` | Google Gemini API (`gemini-1.5-pro` or `gemini-2.0-flash`) | `GEMINI_API_KEY` env var |
+
+Gemini Pro has a native context window of 1M+ tokens — no transcript truncation guard is needed for that provider. Ollama context limits vary by model; for Ollama a soft truncation cap (configurable, default `32k` chars of transcript) is applied in `service.py` to avoid overflowing smaller local models.
+
+**Other files:**
+
+| File | Action | Description |
+|------|--------|-------------|
+| `asr_service/Makefile` | **MODIFY** | Add `make insights` target: `uv run python -m llm_insights_service` on port 8001 |
+
+**Estimate:**
+- FastAPI app + schemas + health endpoint: 1-2 hrs
+- `InsightService` with Ollama integration: 2-3 hrs
+- Gemini API backend (`google-generativeai` SDK): 1-2 hrs
+- Placeholder system prompts (one per insight type): 1 hr
+- Makefile target + README update: 0.5 hr
+- Integration test with real Ollama model + Gemini: 1-2 hrs
+- **Total: 6.5-10.5 hrs | 1-2 days**
+
+**Risks:**
+- Ollama must be running locally; no graceful degradation if not available — mitigated by `GET /health` check the frontend can poll on startup
+- Ollama context limits vary by local model; a configurable soft truncation cap (default `32k` chars) is applied for Ollama only
+- LLM response quality is entirely prompt-dependent; prompt engineering is out of scope for this phase
+- Gemini requires a valid `GEMINI_API_KEY`; no truncation guard needed (1M+ token context window)
+
+**Not changed in either phase:** ASR service backend (sessions, pipelines, WebSocket, cold path).

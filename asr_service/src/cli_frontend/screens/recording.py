@@ -1,30 +1,42 @@
 """
-Recording screen with live transcript view.
+Recording screen with live transcript view and BYT insights pane.
 
-Shows real-time transcription updates via WebSocket.
+Shows real-time transcription updates via WebSocket, plus side-by-side
+LLM-powered insights (BYT pane). Hotkeys toggle each panel for focus.
 """
+
+from datetime import datetime, timezone
 
 from textual.app import ComposeResult
 from textual.screen import Screen
 from textual.containers import Vertical, Horizontal
 from textual.widgets import Header, Footer, Button, Static
 from cli_frontend.widgets.transcript_view import TranscriptView, LiveTranscriptView
+from cli_frontend.widgets.byt_pane import BytPane
 from cli_frontend.widgets.status_bar import StatusBar
 from cli_frontend.api.client import ASRClient
+from cli_frontend.api.insights_client import InsightsClient
 from cli_frontend.api.websocket import WSClient
 from cli_frontend.config import CLISettings
-from cli_frontend.models import WSUtteranceMessage, WSStateChangeMessage
+from cli_frontend.models import (
+    Utterance,
+    WSUtteranceMessage,
+    WSStateChangeMessage,
+    InsightType,
+)
 from cli_frontend.logging import logger
 
 
 class RecordingScreen(Screen):
-    """Live recording screen with transcript view."""
+    """Live recording screen with transcript view and BYT insights pane."""
 
     BINDINGS = [
         ("ctrl+r", "stop_recording", "Stop"),
         ("ctrl+x", "confirm_discard", "Discard"),
         ("ctrl+q", "quit", "Quit"),
         ("escape", "stop_recording", "Stop"),
+        ("ctrl+t", "toggle_transcript", "Toggle Transcript"),
+        ("ctrl+b", "toggle_byt", "Toggle BYT"),
     ]
 
     def __init__(
@@ -49,6 +61,12 @@ class RecordingScreen(Screen):
         self._stopping = False
         self._discarding = False
 
+        # Accumulated final utterances for insight context window
+        self._utterances: list[Utterance] = []
+
+        # Insights HTTP client
+        self._insights_client = InsightsClient(settings.insights_service_url)
+
     def compose(self) -> ComposeResult:
         """Create child widgets."""
         yield Header()
@@ -56,7 +74,14 @@ class RecordingScreen(Screen):
         with Vertical(id="recording_container"):
             yield StatusBar(id="status_bar")
 
-            yield TranscriptView(id="transcript")
+            # Split-screen: TranscriptView (left) + BytPane (right)
+            with Horizontal(id="main_split"):
+                yield TranscriptView(id="transcript")
+                yield BytPane(
+                    auto_refresh_seconds=self.settings.insight_auto_refresh_seconds,
+                    default_context_minutes=self.settings.insight_context_minutes,
+                    id="byt_pane",
+                )
 
             yield LiveTranscriptView(id="live_transcript")
 
@@ -117,6 +142,7 @@ class RecordingScreen(Screen):
                 elif msg.data.is_final:
                     transcript.add_utterance(msg.data)
                     live_transcript.clear_partial(msg.data.source_id)
+                    self._utterances.append(msg.data)
                     logger.info("Utterance added to transcript view")
                 elif msg.data.text.strip():
                     await live_transcript.update_partial(msg.data)
@@ -174,6 +200,80 @@ class RecordingScreen(Screen):
 
         else:
             logger.warning(f"Unknown message type: {msg_type}")
+
+    # ------------------------------------------------------------------
+    # BYT insight fetching
+    # ------------------------------------------------------------------
+
+    async def on_byt_pane_refresh_requested(self, event: BytPane.RefreshRequested) -> None:
+        """Triggered by BytPane when a refresh is needed."""
+        await self._fetch_insight(event.insight_type, event.window_minutes)
+
+    async def _fetch_insight(
+        self, insight_type: InsightType, window_minutes: float | None
+    ) -> None:
+        """Format transcript window, call insights service, update BYT pane."""
+        byt = self.query_one("#byt_pane", BytPane)
+        byt.set_loading(insight_type, True)
+
+        transcript_text = self._format_transcript_window(window_minutes)
+        if not transcript_text.strip():
+            byt.update_insight(
+                insight_type, "*No transcript yet — start speaking to generate insights.*"
+            )
+            return
+
+        try:
+            response = await self._insights_client.get_insight(
+                transcript=transcript_text,
+                insight_type=insight_type,
+                window_minutes=window_minutes,
+            )
+            byt.update_insight(insight_type, response.markdown)
+        except Exception as e:
+            logger.error(f"Insight fetch failed for {insight_type}: {e}", exc_info=True)
+            byt.update_insight(
+                insight_type,
+                f"*⚠ Could not reach insights service: {e}*\n\n"
+                "Make sure `llm-insights-service` is running (`make insights`).",
+            )
+
+    def _format_transcript_window(self, window_minutes: float | None) -> str:
+        """
+        Format accumulated utterances into timestamped plain text.
+
+        Args:
+            window_minutes: If given, only include utterances from the last N minutes.
+                            None means the full session.
+        """
+        utterances = self._utterances
+        if window_minutes is not None and utterances:
+            cutoff = utterances[-1].start_time - window_minutes * 60
+            utterances = [u for u in utterances if u.start_time >= cutoff]
+
+        lines = []
+        for u in utterances:
+            ts = datetime.fromtimestamp(u.start_time, tz=timezone.utc).strftime("%H:%M:%S")
+            lines.append(f"[{ts}] Source {u.source_id}: {u.text}")
+        return "\n".join(lines)
+
+    # ------------------------------------------------------------------
+    # Toggle hotkeys
+    # ------------------------------------------------------------------
+
+    def action_toggle_transcript(self) -> None:
+        """Ctrl+T — hide/show TranscriptView (BYT expands to fill)."""
+        transcript = self.query_one("#transcript", TranscriptView)
+        transcript.toggle_class("hidden")
+
+    def action_toggle_byt(self) -> None:
+        """Ctrl+B — hide/show BytPane (TranscriptView expands to fill)."""
+        byt = self.query_one("#byt_pane", BytPane)
+        byt.toggle_class("hidden")
+
+    # ------------------------------------------------------------------
+    # Existing controls
+    # ------------------------------------------------------------------
 
     async def action_stop_recording(self):
         """Handle stop recording action."""
@@ -261,7 +361,9 @@ class RecordingScreen(Screen):
         """Cleanup when screen is unmounted."""
         if self.ws_client:
             self.ws_client.disconnect()
+        await self._insights_client.close()
 
     async def action_confirm_discard(self):
         """Handle discard action via key binding."""
         self.confirm_discard()
+

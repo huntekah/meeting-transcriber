@@ -22,6 +22,11 @@ class CLISettings(BaseSettings):
         -1
     )  # Remember last system audio (default -1 = ScreenCaptureKit)
 
+    # LLM insights service
+    insights_service_url: str = "http://localhost:8001"
+    insight_auto_refresh_seconds: int = 60  # 0 = disabled
+    insight_context_minutes: int = 5  # default context window for LLM
+
     class Config:
         env_prefix = "CLI_"
         extra = "ignore"
