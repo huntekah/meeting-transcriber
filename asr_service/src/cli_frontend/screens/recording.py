@@ -11,6 +11,7 @@ from textual.app import ComposeResult
 from textual.screen import Screen
 from textual.containers import Vertical, Horizontal
 from textual.widgets import Header, Footer, Button, Static
+from textual import work
 from cli_frontend.widgets.transcript_view import TranscriptView, LiveTranscriptView
 from cli_frontend.widgets.byt_pane import BytPane
 from cli_frontend.widgets.status_bar import StatusBar
@@ -22,7 +23,6 @@ from cli_frontend.models import (
     Utterance,
     WSUtteranceMessage,
     WSStateChangeMessage,
-    InsightType,
 )
 from cli_frontend.logging import logger
 
@@ -78,6 +78,7 @@ class RecordingScreen(Screen):
             with Horizontal(id="main_split"):
                 yield TranscriptView(id="transcript")
                 yield BytPane(
+                    skills=[],  # populated async in on_mount via GET /skills
                     auto_refresh_seconds=self.settings.insight_auto_refresh_seconds,
                     default_context_minutes=self.settings.insight_context_minutes,
                     id="byt_pane",
@@ -97,7 +98,7 @@ class RecordingScreen(Screen):
         yield Footer()
 
     async def on_mount(self):
-        """Start WebSocket connection when mounted."""
+        """Start WebSocket connection and load BYT skills when mounted."""
         logger.info(f"RecordingScreen mounted for session {self.session_id}")
         logger.info(f"WebSocket URL: {self.ws_url}")
 
@@ -109,6 +110,15 @@ class RecordingScreen(Screen):
         self.ws_client = WSClient(self.ws_url)
         self.ws_client.start(self.on_ws_message)
         logger.info("WebSocket client started")
+
+        # Load skills from LLM Intelligence service (non-blocking; pane shows guidance if empty)
+        skills = await self._insights_client.get_skills()
+        byt = self.query_one("#byt_pane", BytPane)
+        if skills:
+            await byt.reload_skills(skills)
+            logger.info(f"BYT pane loaded {len(skills)} skill(s): {[s.name for s in skills]}")
+        else:
+            logger.warning("No skills loaded — BYT pane will show setup guidance")
 
     async def on_ws_message(self, data: dict):
         """
@@ -205,37 +215,41 @@ class RecordingScreen(Screen):
     # BYT insight fetching
     # ------------------------------------------------------------------
 
-    async def on_byt_pane_refresh_requested(self, event: BytPane.RefreshRequested) -> None:
-        """Triggered by BytPane when a refresh is needed."""
-        await self._fetch_insight(event.insight_type, event.window_minutes)
+    def on_byt_pane_refresh_requested(self, event: BytPane.RefreshRequested) -> None:
+        """Triggered by BytPane when a refresh is needed. Fires a background worker."""
+        self._fetch_insight(event.skill_name, event.window_minutes)
 
+    @work(exclusive=False)
     async def _fetch_insight(
-        self, insight_type: InsightType, window_minutes: float | None
+        self, skill_name: str, window_minutes: float | None
     ) -> None:
-        """Format transcript window, call insights service, update BYT pane."""
+        """Format transcript window, call insights service, update BYT pane.
+
+        Runs as a Textual background worker so the UI stays responsive during
+        the LLM HTTP call (which can take 10-30 seconds).
+        """
         byt = self.query_one("#byt_pane", BytPane)
-        byt.set_loading(insight_type, True)
+        byt.set_loading(skill_name, True)
 
         transcript_text = self._format_transcript_window(window_minutes)
         if not transcript_text.strip():
             byt.update_insight(
-                insight_type, "*No transcript yet — start speaking to generate insights.*"
+                skill_name, "*No transcript yet — start speaking to generate insights.*"
             )
             return
 
         try:
             response = await self._insights_client.get_insight(
                 transcript=transcript_text,
-                insight_type=insight_type,
-                window_minutes=window_minutes,
+                skill_name=skill_name,
             )
-            byt.update_insight(insight_type, response.markdown)
+            byt.update_insight(skill_name, response.markdown)
         except Exception as e:
-            logger.error(f"Insight fetch failed for {insight_type}: {e}", exc_info=True)
+            logger.error(f"Insight fetch failed for {skill_name}: {e}", exc_info=True)
             byt.update_insight(
-                insight_type,
+                skill_name,
                 f"*⚠ Could not reach insights service: {e}*\n\n"
-                "Make sure `llm-insights-service` is running (`make insights`).",
+                "Make sure the LLM Intelligence service is running (`make run-insights`).",
             )
 
     def _format_transcript_window(self, window_minutes: float | None) -> str:

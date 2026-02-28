@@ -4,7 +4,6 @@ Pydantic models mirroring backend schemas.
 These models ensure type safety when communicating with the ASR service API.
 """
 
-from enum import Enum
 from pydantic import BaseModel
 from typing import List, Literal, Union, Optional
 
@@ -91,26 +90,24 @@ WSMessage = Union[
 # --- Insight models ---
 
 
-class InsightType(str, Enum):
-    """Type of LLM insight to generate."""
+class SkillInfo(BaseModel):
+    """Public metadata for a skill, returned by GET /skills on the LLM Intelligence service."""
 
-    EMOTION_TRANSLATE = "emotion_translate"
-    CODE = "code"
-    KNOWLEDGE = "knowledge"
-    PANIC_MODE = "panic_mode"
+    name: str
+    description: str
+    display: str  # emoji + label, e.g. "🎭 Emotion Translate"
 
 
 class InsightRequest(BaseModel):
     """Request to the LLM insights service."""
 
+    skill_name: str
     transcript: str
-    insight_type: InsightType
-    window_minutes: Optional[float] = None  # informational; slicing done by frontend
+    model: Optional[str] = None  # optional model override sent by the frontend
 
 
 class InsightResponse(BaseModel):
     """Response from the LLM insights service."""
 
     markdown: str
-    insight_type: InsightType
-    token_count: Optional[int] = None
+    skill_name: str

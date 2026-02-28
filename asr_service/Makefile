@@ -1,4 +1,4 @@
-.PHONY: help install build-swift run dev run-cli test test-coverage test-backend test-frontend clean lint format
+.PHONY: help install build-swift run dev run-cli run-insights run-all test test-coverage test-backend test-frontend clean lint format
 
 help:
 	@echo "Available commands:"
@@ -7,6 +7,8 @@ help:
 	@echo "  make run           - Start the ASR service (compiles Swift binary if needed)"
 	@echo "  make dev           - Start with auto-reload (development mode, compiles Swift binary if needed)"
 	@echo "  make run-cli       - Start the CLI frontend (compiles Swift binary if needed)"
+	@echo "  make run-insights  - Start the LLM Intelligence service (port 8001)"
+	@echo "  make run-all       - Start both ASR service and LLM Intelligence service"
 	@echo "  make test          - Run all tests"
 	@echo "  make test-coverage - Run tests with coverage report"
 	@echo "  make test-backend  - Run backend tests only"
@@ -39,6 +41,14 @@ dev: build-swift
 
 run-cli: build-swift
 	cd src && uv run --group cli python -m cli_frontend
+
+run-insights:
+	cd ../llm_intelligence && make run
+
+run-all: build-swift
+	@echo "Starting ASR service (port 8000) and LLM Intelligence service (port 8001)..."
+	@(cd src && uv run uvicorn asr_service.main:app --host 0.0.0.0 --port 8000) &
+	@cd ../llm_intelligence && make run
 
 test:
 	uv run --all-groups pytest
