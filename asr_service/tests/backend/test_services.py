@@ -150,8 +150,8 @@ class TestTranscriptMerger:
         merger = ChronologicalMerger()
 
         # Add utterances out of order
-        utt1 = Utterance(source_id=0, start_time=1.0, end_time=2.0, text="First")
-        utt2 = Utterance(source_id=1, start_time=0.5, end_time=1.5, text="Second")
+        utt1 = Utterance(source_id=0, source_label="Mic", start_time=1.0, end_time=2.0, text="First")
+        utt2 = Utterance(source_id=1, source_label="System", start_time=0.5, end_time=1.5, text="Second")
 
         merger.add_utterance(utt1)
         merger.add_utterance(utt2)
@@ -170,8 +170,8 @@ class TestTranscriptMerger:
         merger = ChronologicalMerger()
 
         # Create overlapping utterances
-        utt1 = Utterance(source_id=0, start_time=1.0, end_time=3.0, text="First")
-        utt2 = Utterance(source_id=1, start_time=2.0, end_time=4.0, text="Second")
+        utt1 = Utterance(source_id=0, source_label="Mic", start_time=1.0, end_time=3.0, text="First")
+        utt2 = Utterance(source_id=1, source_label="System", start_time=2.0, end_time=4.0, text="Second")
 
         merger.add_utterance(utt1)
         merger.add_utterance(utt2)
@@ -194,7 +194,7 @@ class TestTranscriptMerger:
 
         merger.add_listener(listener)
 
-        utt = Utterance(source_id=0, start_time=1.0, end_time=2.0, text="Test")
+        utt = Utterance(source_id=0, source_label="Mic", start_time=1.0, end_time=2.0, text="Test")
         merger.add_utterance(utt)
 
         assert len(callback_called) == 1

@@ -98,6 +98,7 @@ class TestTranscriptView:
 
         utterance = Utterance(
             source_id=0,
+            source_label="Test Device",
             start_time=1000.0,
             end_time=1002.0,
             text="Hello world",
@@ -115,6 +116,7 @@ class TestTranscriptView:
 
         utterance = Utterance(
             source_id=0,
+            source_label="Test Device",
             start_time=1000.0,
             end_time=1002.0,
             text="Overlapping speech",
@@ -133,10 +135,10 @@ class TestTranscriptView:
 
         # Add some utterances
         view.add_utterance(
-            Utterance(source_id=0, start_time=1.0, end_time=2.0, text="Test 1")
+            Utterance(source_id=0, source_label="Test Device", start_time=1.0, end_time=2.0, text="Test 1")
         )
         view.add_utterance(
-            Utterance(source_id=1, start_time=2.0, end_time=3.0, text="Test 2")
+            Utterance(source_id=1, source_label="Test Device", start_time=2.0, end_time=3.0, text="Test 2")
         )
 
         view.clear_transcript()
@@ -308,6 +310,7 @@ class TestLiveTranscriptView:
 
         utterance = Utterance(
             source_id=0,
+            source_label="Test Device",
             start_time=1000.0,
             end_time=1002.0,
             text="Partial text",

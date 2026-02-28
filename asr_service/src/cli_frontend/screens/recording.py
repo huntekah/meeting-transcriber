@@ -268,7 +268,7 @@ class RecordingScreen(Screen):
         lines = []
         for u in utterances:
             ts = datetime.fromtimestamp(u.start_time, tz=timezone.utc).strftime("%H:%M:%S")
-            lines.append(f"[{ts}] Source {u.source_id}: {u.text}")
+            lines.append(f"[{ts}] {u.source_label}: {u.text}")
         return "\n".join(lines)
 
     # ------------------------------------------------------------------

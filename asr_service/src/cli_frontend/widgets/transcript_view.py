@@ -17,7 +17,7 @@ def _format_utterance_line(utterance: Utterance, *, show_partial: bool = False) 
 
     source_colors = ["cyan", "green", "yellow", "magenta", "blue"]
     color = source_colors[utterance.source_id % len(source_colors)]
-    source_label = f"[{color}][Source {utterance.source_id}][/{color}]"
+    source_label = f"[{color}][{utterance.source_label}][/{color}]"
 
     overlap_marker = ""
     if utterance.overlaps_with:

@@ -48,6 +48,7 @@ class LiveTranscriber:
     def __init__(
         self,
         source_id: int,
+        source_label: str,
         input_queue: queue.Queue,
         output_callback: Callable[[Utterance], None],
         whisper_model_name: str | None = None,
@@ -59,12 +60,14 @@ class LiveTranscriber:
 
         Args:
             source_id: Source identifier
+            source_label: Human-readable device name stamped on every utterance
             input_queue: Queue receiving audio segments from VADAudioProducer
             output_callback: Callback to send transcribed utterances
             whisper_model_name: MLX-Whisper model name (default from settings)
             language: Language code for transcription
         """
         self.source_id = source_id
+        self.source_label = source_label
         self.input_queue = input_queue
         self.output_callback = output_callback
         self.whisper_model_name = whisper_model_name or settings.MLX_WHISPER_MODEL
@@ -186,6 +189,7 @@ class LiveTranscriber:
             end_time = start_time + duration
             utterance = Utterance(
                 source_id=self.source_id,
+                source_label=self.source_label,
                 start_time=start_time,
                 end_time=end_time,
                 text=text,
@@ -259,6 +263,7 @@ class LiveTranscriber:
         end_timestamp = segment_start_time + duration
         utterance = Utterance(
             source_id=self.source_id,
+            source_label=self.source_label,
             start_time=segment_start_time,
             end_time=end_timestamp,
             text=result["text"],
@@ -327,6 +332,7 @@ class LiveTranscriber:
             try:
                 error_utterance = Utterance(
                     source_id=self.source_id,
+                    source_label=self.source_label,
                     start_time=time.time(),
                     end_time=time.time(),
                     text=f"[TRANSCRIPTION ERROR: {str(error)}]",

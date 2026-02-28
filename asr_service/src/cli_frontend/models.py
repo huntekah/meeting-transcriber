@@ -32,6 +32,7 @@ class Utterance(BaseModel):
     """Live transcription utterance."""
 
     source_id: int
+    source_label: str  # Human-readable device name (e.g. "MacBook Pro Microphone")
     start_time: float  # Unix timestamp
     end_time: float  # Unix timestamp
     text: str

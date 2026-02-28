@@ -66,6 +66,7 @@ def make_lt(callback=None) -> LiveTranscriber:
         callback = lambda u: None  # noqa: E731
     return LiveTranscriber(
         source_id=0,
+        source_label="Test Device",
         input_queue=queue.Queue(),
         output_callback=callback,
     )

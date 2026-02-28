@@ -63,6 +63,7 @@ class SourcePipeline:
         )
         self.transcriber = LiveTranscriber(
             source_id=source_id,
+            source_label=self.device_name,
             input_queue=self._audio_queue,
             output_callback=utterance_callback,
             whisper_model_name=whisper_model_name,

@@ -68,6 +68,7 @@ class TestUtterance:
         """Test creating valid Utterance."""
         utterance = Utterance(
             source_id=0,
+            source_label="Test Device",
             start_time=1000.0,
             end_time=1002.5,
             text="Hello world",
@@ -83,6 +84,7 @@ class TestUtterance:
         """Test Utterance with overlap markers."""
         utterance = Utterance(
             source_id=0,
+            source_label="Test Device",
             start_time=1.0,
             end_time=2.0,
             text="Overlapping",
@@ -96,6 +98,7 @@ class TestUtterance:
         """Test Utterance with low confidence."""
         utterance = Utterance(
             source_id=0,
+            source_label="Test Device",
             start_time=1.0,
             end_time=2.0,
             text="Uncertain",
@@ -112,6 +115,7 @@ class TestWebSocketMessages:
         """Test WSUtteranceMessage."""
         utterance = Utterance(
             source_id=0,
+            source_label="Test Device",
             start_time=1.0,
             end_time=2.0,
             text="Test",

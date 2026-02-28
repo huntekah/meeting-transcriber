@@ -184,6 +184,7 @@ def test_hallucination_filter_rejects_known_artifact_with_high_no_speech_prob():
 
     lt = LiveTranscriber(
         source_id=0,
+        source_label="Test Device",
         input_queue=queue.Queue(),
         output_callback=lambda u: None,
     )
@@ -198,6 +199,7 @@ def test_hallucination_filter_rejects_artifact_with_length_mismatch():
 
     lt = LiveTranscriber(
         source_id=0,
+        source_label="Test Device",
         input_queue=queue.Queue(),
         output_callback=lambda u: None,
     )
@@ -213,6 +215,7 @@ def test_hallucination_filter_passes_genuine_thank_you():
 
     lt = LiveTranscriber(
         source_id=0,
+        source_label="Test Device",
         input_queue=queue.Queue(),
         output_callback=lambda u: None,
     )
@@ -228,6 +231,7 @@ def test_hallucination_filter_passes_normal_speech():
 
     lt = LiveTranscriber(
         source_id=0,
+        source_label="Test Device",
         input_queue=queue.Queue(),
         output_callback=lambda u: None,
     )
@@ -242,6 +246,7 @@ def test_hallucination_filter_rejects_empty_text():
 
     lt = LiveTranscriber(
         source_id=0,
+        source_label="Test Device",
         input_queue=queue.Queue(),
         output_callback=lambda u: None,
     )

@@ -37,6 +37,7 @@ class Utterance(BaseModel):
     """
 
     source_id: int = Field(..., description="Source index")
+    source_label: str = Field(..., description="Human-readable source name (e.g. device name)")
     start_time: float = Field(..., description="Start time (Unix timestamp)")
     end_time: float = Field(..., description="End time (Unix timestamp)")
     text: str = Field(..., description="Transcribed text")

@@ -106,6 +106,7 @@ async def test_live_transcription_debug(loaded_models):
     # Create transcriber
     transcriber = LiveTranscriber(
         source_id=0,
+        source_label="Test Device",
         input_queue=input_queue,
         output_callback=callback,
         whisper_model_name="mlx-community/whisper-large-v3-turbo",
