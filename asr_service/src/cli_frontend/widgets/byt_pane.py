@@ -19,10 +19,9 @@ from textual.reactive import reactive
 from textual.widget import Widget
 from textual.widgets import (
     Button,
-    Label,
     LoadingIndicator,
     Markdown,
-    Select,
+    ProgressBar,
     Static,
     TabbedContent,
     TabPane,
@@ -136,13 +135,12 @@ class BytPane(Widget):
 
                 with Horizontal(id="byt_footer"):
                     yield Button("↻ Refresh", id="byt_refresh_btn", variant="default")
-                    yield Label("Context:", id="byt_context_label")
-                    yield Select(
-                        [(label, val) for label, val in CONTEXT_OPTIONS],
-                        value=self.context_window,
-                        id="byt_context_select",
-                        allow_blank=False,
-                    )
+                yield ProgressBar(
+                    total=float(self._auto_refresh_seconds),
+                    show_percentage=False,
+                    show_eta=False,
+                    id="byt_progress",
+                )
 
     # ------------------------------------------------------------------
     # Lifecycle
@@ -151,6 +149,7 @@ class BytPane(Widget):
     def on_mount(self) -> None:
         if self._skills and self._auto_refresh_seconds > 0:
             self.set_interval(self._auto_refresh_seconds, self._auto_refresh_tick)
+            self.set_interval(1, self._advance_progress)
 
     async def reload_skills(self, skills: list[SkillInfo]) -> None:
         """
@@ -158,14 +157,13 @@ class BytPane(Widget):
 
         Called by RecordingScreen after fetching skills from GET /skills.
         Uses Textual's recompose() to re-run compose() with the new skill list.
+        Timers are re-established by on_mount() after recompose().
         """
         self._skills = skills
         self._cache.clear()
         self._stale.clear()
         self._loading = {s.name: False for s in skills}
         await self.recompose()
-        if skills and self._auto_refresh_seconds > 0:
-            self.set_interval(self._auto_refresh_seconds, self._auto_refresh_tick)
 
     # ------------------------------------------------------------------
     # Public API (called by RecordingScreen)
@@ -213,11 +211,6 @@ class BytPane(Widget):
         if event.button.id == "byt_refresh_btn":
             self._request_refresh()
 
-    def on_select_changed(self, event: Select.Changed) -> None:
-        if event.select.id == "byt_context_select":
-            self.context_window = event.value
-            self.mark_stale()
-
     def on_tabbed_content_tab_activated(self, event: TabbedContent.TabActivated) -> None:
         """Auto-fetch when switching to a tab with no cached content."""
         active = self._active_skill_name()
@@ -243,13 +236,29 @@ class BytPane(Widget):
     def _request_refresh(self) -> None:
         active = self._active_skill_name()
         if active is not None:
+            self._reset_progress()
             self.post_message(self.RefreshRequested(active, self.context_window))
 
     def _auto_refresh_tick(self) -> None:
         """Called by set_interval — only refreshes if visible."""
         if not self.display:
             return
+        self._reset_progress()
         self._request_refresh()
+
+    def _advance_progress(self) -> None:
+        """Tick the progress bar forward by 1 second."""
+        try:
+            self.query_one("#byt_progress", ProgressBar).advance(1)
+        except Exception:
+            pass
+
+    def _reset_progress(self) -> None:
+        """Reset the progress bar to zero (after a refresh fires)."""
+        try:
+            self.query_one("#byt_progress", ProgressBar).update(progress=0)
+        except Exception:
+            pass
 
     def _refresh_markdown_widget(self, skill_name: str) -> None:
         try:

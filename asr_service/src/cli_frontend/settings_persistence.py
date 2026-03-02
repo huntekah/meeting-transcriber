@@ -96,6 +96,24 @@ class SettingsPersistence:
             logger.error(f"Failed to load output directory: {e}")
             return None
 
+    def save_general_settings(self, settings_dict: dict) -> None:
+        """Save general app settings (LLM, ASR, output preferences)."""
+        try:
+            raw = self._load_raw_settings()
+            raw.update(settings_dict)
+            self._save_raw_settings(raw)
+            logger.debug(f"Saved general settings: {list(settings_dict.keys())}")
+        except Exception as e:
+            logger.error(f"Failed to save general settings: {e}", exc_info=True)
+
+    def load_general_settings(self) -> dict:
+        """Load general app settings."""
+        try:
+            return self._load_raw_settings()
+        except Exception as e:
+            logger.error(f"Failed to load general settings: {e}")
+            return {}
+
     def _load_raw_settings(self) -> Dict[str, Any]:
         """
         Load raw settings from file.

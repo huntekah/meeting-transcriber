@@ -10,7 +10,7 @@ from datetime import datetime, timezone
 from textual.app import ComposeResult
 from textual.screen import Screen
 from textual.containers import Vertical, Horizontal
-from textual.widgets import Header, Footer, Button, Static
+from textual.widgets import Header, Footer
 from textual import work
 from cli_frontend.widgets.transcript_view import TranscriptView, LiveTranscriptView
 from cli_frontend.widgets.byt_pane import BytPane
@@ -31,12 +31,12 @@ class RecordingScreen(Screen):
     """Live recording screen with transcript view and BYT insights pane."""
 
     BINDINGS = [
-        ("ctrl+r", "stop_recording", "Stop"),
-        ("ctrl+x", "confirm_discard", "Discard"),
-        ("ctrl+q", "quit", "Quit"),
         ("escape", "stop_recording", "Stop"),
-        ("ctrl+t", "toggle_transcript", "Toggle Transcript"),
-        ("ctrl+b", "toggle_byt", "Toggle BYT"),
+        ("ctrl+x", "confirm_discard", "Discard"),
+        ("ctrl+comma", "open_settings", "Settings"),
+        # Keep but hide from Footer — available via keyboard / code
+        ("ctrl+t", "toggle_transcript", ""),
+        ("ctrl+b", "toggle_byt", ""),
     ]
 
     def __init__(
@@ -85,15 +85,6 @@ class RecordingScreen(Screen):
                 )
 
             yield LiveTranscriptView(id="live_transcript")
-
-            with Horizontal(id="controls"):
-                with Horizontal(id="controls_main"):
-                    yield Button("■ Stop & Save", variant="primary", id="stop_btn")
-                    yield Button("✗ Discard", variant="default", id="discard_btn")
-                with Horizontal(id="controls_confirm", classes="hidden"):
-                    yield Static("Discard recording?", id="discard_prompt")
-                    yield Button("Yes, Delete", variant="error", id="discard_yes_btn")
-                    yield Button("No, Go Back", variant="default", id="discard_no_btn")
 
         yield Footer()
 
@@ -293,16 +284,21 @@ class RecordingScreen(Screen):
         """Handle stop recording action."""
         await self.stop_recording()
 
-    def on_button_pressed(self, event: Button.Pressed):
-        """Handle button clicks."""
-        if event.button.id == "stop_btn":
-            self.app.call_later(self.stop_recording)
-        elif event.button.id == "discard_btn":
-            self.confirm_discard()
-        elif event.button.id == "discard_yes_btn":
+    def action_confirm_discard(self) -> None:
+        """Ctrl+X — open discard confirmation modal."""
+        if self._stopping or self._discarding:
+            return
+        from .discard_modal import DiscardModal
+        self.app.push_screen(DiscardModal(), callback=self._on_discard_result)
+
+    def _on_discard_result(self, confirmed: bool) -> None:
+        if confirmed:
             self.app.call_later(self.discard_recording)
-        elif event.button.id == "discard_no_btn":
-            self.cancel_discard()
+
+    def action_open_settings(self) -> None:
+        """Ctrl+, — open settings modal."""
+        from cli_frontend.screens.settings import SettingsScreen
+        self.app.push_screen(SettingsScreen(self.settings))
 
     async def stop_recording(self):
         """Stop recording and disconnect."""
@@ -322,27 +318,6 @@ class RecordingScreen(Screen):
             self._stopping = False
             return
 
-    def confirm_discard(self):
-        """Show discard confirmation row."""
-        if self._stopping:
-            return
-        self._set_discard_confirm(True)
-
-    def cancel_discard(self):
-        """Hide discard confirmation row."""
-        self._set_discard_confirm(False)
-
-    def _set_discard_confirm(self, show: bool):
-        controls_main = self.query_one("#controls_main", Horizontal)
-        controls_confirm = self.query_one("#controls_confirm", Horizontal)
-
-        if show:
-            controls_main.add_class("hidden")
-            controls_confirm.remove_class("hidden")
-        else:
-            controls_confirm.add_class("hidden")
-            controls_main.remove_class("hidden")
-
     async def discard_recording(self):
         """Cancel recording and discard outputs."""
         if self._stopping or self._discarding:
@@ -359,7 +334,6 @@ class RecordingScreen(Screen):
         except Exception as e:
             status_bar.set_status(f"❌ Error discarding: {e}")
             self._discarding = False
-            self._set_discard_confirm(False)
             return
 
     def return_to_setup(self):
@@ -376,8 +350,4 @@ class RecordingScreen(Screen):
         if self.ws_client:
             self.ws_client.disconnect()
         await self._insights_client.close()
-
-    async def action_confirm_discard(self):
-        """Handle discard action via key binding."""
-        self.confirm_discard()
 

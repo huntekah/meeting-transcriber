@@ -17,15 +17,22 @@ class CLISettings(BaseSettings):
     show_backchannels: bool = False  # "uh-huh", "yeah"
 
     # Device selection persistence
-    last_mic_device_index: int = 0  # Remember last microphone selection
-    last_system_audio_device_index: int = (
-        -1
-    )  # Remember last system audio (default -1 = ScreenCaptureKit)
+    last_mic_device_index: int = 0
+    last_system_audio_device_index: int = -1
 
     # LLM insights service
     insights_service_url: str = "http://localhost:8001"
     insight_auto_refresh_seconds: int = 60  # 0 = disabled
-    insight_context_minutes: int = 5  # default context window for LLM
+    insight_context_minutes: int = 5
+
+    # Audio engine
+    use_local_asr: bool = True  # mlx-whisper (requires Apple Silicon)
+
+    # LLM intelligence backend
+    use_local_llm: bool = True  # True = Ollama, False = Gemini
+    ollama_host: str = "http://localhost:11434"
+    ollama_model: str = "gemma3:4b-it-qat"
+    gemini_api_key: str = ""
 
     class Config:
         env_prefix = "CLI_"
