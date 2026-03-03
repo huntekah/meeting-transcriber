@@ -53,6 +53,20 @@ class SettingsScreen(ModalScreen):
                     yield Switch(value=self.settings.auto_scroll, id="auto_scroll")
                     yield Label("Auto-scroll transcript")
 
+                yield Label("Transcript / BYT split (transcript %):", classes="field_label")
+                yield Select(
+                    [
+                        ("30% transcript", 30),
+                        ("50% transcript", 50),
+                        ("70% transcript (default)", 70),
+                        ("80% transcript", 80),
+                        ("90% transcript", 90),
+                    ],
+                    id="split_transcript_percent",
+                    value=self.settings.split_transcript_percent,
+                    allow_blank=False,
+                )
+
                 yield Label("BYT auto-refresh (seconds):", classes="field_label")
                 yield Input(
                     value=str(self.settings.insight_auto_refresh_seconds),
@@ -243,6 +257,9 @@ class SettingsScreen(ModalScreen):
         self.settings.auto_scroll = self.query_one("#auto_scroll", Switch).value
         self.settings.use_local_asr = self.query_one("#use_local_asr", Switch).value
         self.settings.asr_language = self.query_one("#asr_language", Select).value
+        self.settings.split_transcript_percent = int(
+            self.query_one("#split_transcript_percent", Select).value
+        )
         self.settings.insight_auto_refresh_seconds = _int("insight_auto_refresh_seconds", 60)
         self.settings.insight_context_minutes = _int("insight_context_minutes", 5)
         self.settings.use_local_llm = use_local
@@ -262,6 +279,7 @@ class SettingsScreen(ModalScreen):
         persistence.save_general_settings({
             "show_timestamps": self.settings.show_timestamps,
             "auto_scroll": self.settings.auto_scroll,
+            "split_transcript_percent": self.settings.split_transcript_percent,
             "use_local_asr": self.settings.use_local_asr,
             "asr_language": self.settings.asr_language,
             "insight_auto_refresh_seconds": self.settings.insight_auto_refresh_seconds,
@@ -270,6 +288,7 @@ class SettingsScreen(ModalScreen):
             "ollama_host": self.settings.ollama_host,
             "ollama_model": self.settings.ollama_model,
             "gemini_model": self.settings.gemini_model,
+            "gemini_api_key": self.settings.gemini_api_key or "",
             "output_dir": self.settings.output_dir,
         })
 

@@ -14,6 +14,9 @@ class CLISettings(BaseSettings):
     output_dir: str = "~/.meeting_scribe/meetings/"
     auto_scroll: bool = True
     show_timestamps: bool = True
+
+    # Recording layout: transcript vs BYT pane width (percent for transcript, rest is BYT)
+    split_transcript_percent: int = 70  # 30–90; 70 = 70% transcript, 30% BYT
     show_backchannels: bool = False  # "uh-huh", "yeah"
 
     # Device selection persistence
@@ -41,5 +44,20 @@ class CLISettings(BaseSettings):
         extra = "ignore"
 
 
-# Global settings instance
+# Global settings instance (env defaults, then overridden by persisted values)
 settings = CLISettings()
+
+
+def _apply_persisted_settings() -> None:
+    """Load settings from ~/.meeting_scribe/cli_config.json so all preferences are restored on startup."""
+    try:
+        from cli_frontend.settings_persistence import persistence  # avoid circular import at top
+        saved = persistence.load_general_settings()
+        for key, value in saved.items():
+            if hasattr(settings, key) and value is not None:
+                setattr(settings, key, value)
+    except Exception:
+        pass
+
+
+_apply_persisted_settings()

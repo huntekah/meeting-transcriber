@@ -92,10 +92,24 @@ class RecordingScreen(Screen):
 
         yield Footer()
 
+    def _apply_split_ratio(self) -> None:
+        """Apply transcript/BYT split from settings (percent for transcript → fr units)."""
+        pct = max(20, min(90, self.settings.split_transcript_percent))
+        transcript_fr = round(pct / 10)
+        byt_fr = 10 - transcript_fr
+        if byt_fr < 1:
+            byt_fr, transcript_fr = 1, 9
+        transcript = self.query_one("#transcript", TranscriptView)
+        byt = self.query_one("#byt_pane", BytPane)
+        transcript.styles.width = f"{transcript_fr}fr"
+        byt.styles.width = f"{byt_fr}fr"
+
     async def on_mount(self):
         """Start WebSocket connection and load BYT skills when mounted."""
         logger.info(f"RecordingScreen mounted for session {self.session_id}")
         logger.info(f"WebSocket URL: {self.ws_url}")
+
+        self._apply_split_ratio()
 
         status_bar = self.query_one("#status_bar", StatusBar)
         status_bar.start_recording()

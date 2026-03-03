@@ -37,7 +37,7 @@ class MeetingScribeApp(App):
 
     def on_mount(self):
         """Initialize app on mount."""
-        # Start with setup screen
+        # Settings already restored from ~/.meeting_scribe/cli_config.json at config load
         self.push_screen(SetupScreen(self.client, self.settings))
 
     async def action_settings(self):
