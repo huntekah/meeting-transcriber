@@ -216,8 +216,8 @@ class SettingsScreen(ModalScreen):
             limits.append(f"in={model.input_token_limit}")
         if model.output_token_limit:
             limits.append(f"out={model.output_token_limit}")
-        limits_label = f" [{', '.join(limits)}]" if limits else ""
-        return Text(f"{display} ({model.id}){limits_label}"), model.id
+        limits_label = f"[{', '.join(limits)}]" if limits else ""
+        return Text(f"{display} {limits_label}") if limits_label else Text(display), model.id
 
     # ------------------------------------------------------------------
     # Event handlers
