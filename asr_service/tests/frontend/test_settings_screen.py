@@ -5,7 +5,7 @@ Settings screen layout tests.
 import pytest
 from pathlib import Path
 from textual.app import App
-from textual.widgets import Input
+from textual.widgets import Input, Select
 
 import cli_frontend
 from cli_frontend.config import CLISettings
@@ -32,10 +32,13 @@ async def test_settings_inputs_visible_with_small_terminal():
         screen = app.screen
         scroll = screen.query_one("#settings_scroll")
         ollama_host = screen.query_one("#ollama_host", Input)
-        ollama_model = screen.query_one("#ollama_model", Input)
+        ollama_model = screen.query_one("#ollama_model", Select)
+        gemini_model = screen.query_one("#gemini_model", Select)
 
         assert scroll.size.height > 0
         assert ollama_host.display is True
         assert ollama_model.display is True
+        assert gemini_model.display is True
         assert ollama_host.size.height > 0
         assert ollama_model.size.height > 0
+        assert gemini_model.size.height > 0

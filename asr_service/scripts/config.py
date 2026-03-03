@@ -21,6 +21,10 @@ class ScriptConfig(BaseSettings):
     WHISPER_MODEL: str = "large-v3-turbo"  # For faster-whisper
     MLX_WHISPER_MODEL: str = "mlx-community/whisper-large-v3-turbo"  # For mlx-whisper
 
+    # Qwen3-ASR models
+    QWEN3_ASR_1_7B_MODEL: str = "Qwen/Qwen3-ASR-1.7B"  # For qwen-asr (1.7B)
+    QWEN3_ASR_0_6B_MODEL: str = "Qwen/Qwen3-ASR-0.6B"  # For qwen-asr (0.6B - faster)
+
     # Diarization
     DIARIZATION_MODEL: str = "pyannote/speaker-diarization-3.1"
     HF_TOKEN: str | None = None

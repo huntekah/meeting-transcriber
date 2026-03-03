@@ -55,6 +55,7 @@ async def create_session(
             sources=config.sources,
             model_manager=model_manager,
             output_dir=config.output_dir,
+            language=config.language,
         )
 
         # Start recording

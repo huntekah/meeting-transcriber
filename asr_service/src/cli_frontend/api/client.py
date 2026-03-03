@@ -32,7 +32,7 @@ class ASRClient:
         return [AudioDevice(**d) for d in response.json()]
 
     async def create_session(
-        self, sources: List[SourceConfig], output_dir: Optional[str] = None
+        self, sources: List[SourceConfig], output_dir: Optional[str] = None, language: Optional[str] = None
     ) -> Dict[str, Any]:
         """
         Create new recording session and start recording.
@@ -42,6 +42,7 @@ class ASRClient:
         Args:
             sources: List of audio sources to record from
             output_dir: Optional output directory for transcripts
+            language: Language code for transcription (e.g., "en", "pl", None for auto-detect)
 
         Returns:
             Session response with session_id, state, websocket_url
@@ -51,6 +52,8 @@ class ASRClient:
         }
         if output_dir:
             payload["output_dir"] = output_dir
+        if language and language != "auto":
+            payload["language"] = language
 
         response = await self.client.post("/api/v1/sessions", json=payload)
         response.raise_for_status()

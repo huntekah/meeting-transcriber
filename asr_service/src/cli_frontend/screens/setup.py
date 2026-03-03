@@ -6,6 +6,7 @@ Shows auto-detected device names as status labels.
 """
 
 from typing import List
+from textual.timer import Timer
 from textual.app import ComposeResult
 from textual.screen import Screen
 from textual.containers import Vertical, Horizontal
@@ -28,6 +29,8 @@ from cli_frontend.logging import logger
 class SetupScreen(Screen):
     """Zero-friction launch dashboard."""
 
+    RETRY_SECONDS = 2
+
     BINDINGS = [
         ("ctrl+q", "quit", "Quit"),
         ("ctrl+comma", "open_settings", "Settings"),
@@ -39,6 +42,7 @@ class SetupScreen(Screen):
         self.settings = settings
         self.devices: List[AudioDevice] = []
         self.loading = False
+        self._retry_timer: Timer | None = None
 
     # ------------------------------------------------------------------
     # Layout
@@ -92,6 +96,8 @@ class SetupScreen(Screen):
 
     async def load_devices(self):
         """Fetch devices from backend and populate selectors + status labels."""
+        if self.loading:
+            return
         self.loading = True
         self._set_badge("⏳ Connecting…", "badge_loading")
 
@@ -115,7 +121,11 @@ class SetupScreen(Screen):
                 pre_select_name=saved_system_name,
             )
 
+            self.query_one("#status_message", Static).update("")
             self._refresh_status_labels()
+            if self._retry_timer:
+                self._retry_timer.stop()
+                self._retry_timer = None
 
         except Exception as e:
             logger.error(f"Error loading devices: {e}")
@@ -123,8 +133,16 @@ class SetupScreen(Screen):
             self.query_one("#status_message", Static).update(
                 f"Cannot reach ASR service at {self.settings.api_base_url}"
             )
+            if not self._retry_timer:
+                self._retry_timer = self.set_interval(self.RETRY_SECONDS, self._retry_load_devices)
         finally:
             self.loading = False
+
+    def _retry_load_devices(self) -> None:
+        """Retry device loading until the backend becomes available."""
+        if self.loading:
+            return
+        self.app.call_later(self.load_devices)
 
     def _refresh_status_labels(self):
         """Update the source label display and ready badge based on current selections."""
@@ -227,7 +245,9 @@ class SetupScreen(Screen):
         status.update("Starting…")
         try:
             session_data = await self.client.create_session(
-                sources=sources, output_dir=output_dir or None
+                sources=sources,
+                output_dir=output_dir or None,
+                language=self.settings.asr_language,
             )
             from .recording import RecordingScreen
             self.app.push_screen(
@@ -240,4 +260,3 @@ class SetupScreen(Screen):
             )
         except Exception as e:
             status.update(f"❌ Error creating session: {e}")
-

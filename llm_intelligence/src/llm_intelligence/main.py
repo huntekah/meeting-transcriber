@@ -10,11 +10,17 @@ from dotenv import load_dotenv
 _PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent  # src/llm_intelligence/ → src/ → project root
 load_dotenv(_PROJECT_ROOT / ".env", override=True)  # .env wins over shell — ensures GOOGLE_GENAI_USE_VERTEXAI=false is honoured
 
-from fastapi import FastAPI, HTTPException  # noqa: E402
+from fastapi import FastAPI, HTTPException, Query  # noqa: E402
 from loguru import logger  # noqa: E402
 from pydantic_settings import BaseSettings, SettingsConfigDict  # noqa: E402
 
-from llm_intelligence.schemas import InsightRequest, InsightResponse, SkillInfo  # noqa: E402
+from llm_intelligence.model_catalog import list_models as catalog_list_models  # noqa: E402
+from llm_intelligence.schemas import (  # noqa: E402
+    InsightRequest,
+    InsightResponse,
+    ListModelsResponse,
+    SkillInfo,
+)
 from llm_intelligence.service import InsightsService, SkillNotFoundError  # noqa: E402
 
 
@@ -66,6 +72,14 @@ async def health() -> dict[str, str]:
 async def list_skills() -> list[SkillInfo]:
     """Return all available skill definitions."""
     return _get_service().list_skills()
+
+
+@app.get("/models", response_model=ListModelsResponse)
+def list_models(provider: str = Query("all", pattern="^(ollama|gemini|all)$")) -> ListModelsResponse:
+    """Return available LLM models for the requested provider."""
+    response = catalog_list_models(provider=provider, ollama_host=settings.ollama_host)
+    response.default_model = settings.llm_model
+    return response
 
 
 @app.post("/insights", response_model=InsightResponse)

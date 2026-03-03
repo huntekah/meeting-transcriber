@@ -27,11 +27,13 @@ class CLISettings(BaseSettings):
 
     # Audio engine
     use_local_asr: bool = True  # mlx-whisper (requires Apple Silicon)
+    asr_language: str = "auto"  # "auto" for auto-detect, or language code like "en", "pl"
 
     # LLM intelligence backend
     use_local_llm: bool = True  # True = Ollama, False = Gemini
     ollama_host: str = "http://localhost:11434"
     ollama_model: str = "gemma3:4b-it-qat"
+    gemini_model: str = "gemini-2.5-flash"
     gemini_api_key: str = ""
 
     class Config:

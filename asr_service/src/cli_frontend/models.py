@@ -6,6 +6,7 @@ These models ensure type safety when communicating with the ASR service API.
 
 from pydantic import BaseModel
 from typing import List, Literal, Union, Optional
+from enum import Enum
 
 
 class AudioDevice(BaseModel):
@@ -112,3 +113,37 @@ class InsightResponse(BaseModel):
 
     markdown: str
     skill_name: str
+
+
+class ModelProvider(str, Enum):
+    ollama = "ollama"
+    gemini = "gemini"
+
+
+class ModelCapabilities(BaseModel):
+    text: bool = True
+    image: bool | None = None
+    audio: bool | None = None
+    video: bool | None = None
+
+
+class ModelInfo(BaseModel):
+    id: str
+    provider: ModelProvider
+    display_name: str | None = None
+    size_bytes: int | None = None
+    input_token_limit: int | None = None
+    output_token_limit: int | None = None
+    capabilities: ModelCapabilities | None = None
+    is_local: bool = False
+
+
+class ModelListError(BaseModel):
+    provider: ModelProvider
+    message: str
+
+
+class ListModelsResponse(BaseModel):
+    models: list[ModelInfo]
+    default_model: str | None = None
+    errors: list[ModelListError] = []

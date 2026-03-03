@@ -42,6 +42,7 @@ class SessionManager(SingletonBase):
         sources: List[SourceConfig],
         model_manager,
         output_dir: Path | str | None = None,
+        language: str | None = None,
     ) -> ActiveSession:
         """
         Create new session with unique ID.
@@ -50,6 +51,7 @@ class SessionManager(SingletonBase):
             sources: List of audio sources to capture
             model_manager: ModelManager instance
             output_dir: Optional output directory (default from settings)
+            language: Language code for transcription (e.g., "en", "pl", None for auto-detect)
 
         Returns:
             ActiveSession instance
@@ -83,6 +85,7 @@ class SessionManager(SingletonBase):
             sources=sources,
             model_manager=model_manager,
             output_dir=output_dir,
+            language=language,
         )
 
         # Add to registry

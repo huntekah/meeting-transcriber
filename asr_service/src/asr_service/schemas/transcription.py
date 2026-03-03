@@ -100,10 +100,15 @@ class SessionConfig(BaseModel):
     Attributes:
         sources: List of audio sources to capture
         output_dir: Optional output directory for saved files
+        language: Language code for transcription (e.g., "en", "pl", None for auto-detect)
     """
 
     sources: List[SourceConfig] = Field(..., description="Audio sources")
     output_dir: Optional[str] = Field(None, description="Output directory path")
+    language: Optional[str] = Field(
+        None,
+        description="Language code for transcription (en, pl, etc.) or None for auto-detect"
+    )
 
     class Config:
         json_schema_extra = {
@@ -113,6 +118,7 @@ class SessionConfig(BaseModel):
                     {"device_index": 2, "device_name": "System Audio"},
                 ],
                 "output_dir": "/path/to/output",
+                "language": "en",
             }
         }
 

@@ -64,6 +64,10 @@ class RecordingScreen(Screen):
         # Accumulated final utterances for insight context window
         self._utterances: list[Utterance] = []
 
+        # Current provisional (in-progress) utterances per source
+        # Maps source_id -> latest provisional utterance
+        self._provisional_utterances: dict[int, Utterance] = {}
+
         # Insights HTTP client
         self._insights_client = InsightsClient(settings.insights_service_url)
 
@@ -144,9 +148,13 @@ class RecordingScreen(Screen):
                     transcript.add_utterance(msg.data)
                     live_transcript.clear_partial(msg.data.source_id)
                     self._utterances.append(msg.data)
+                    # Clear any provisional utterance for this source
+                    self._provisional_utterances.pop(msg.data.source_id, None)
                     logger.info("Utterance added to transcript view")
                 elif msg.data.text.strip():
                     await live_transcript.update_partial(msg.data)
+                    # Store/update provisional utterance for this source
+                    self._provisional_utterances[msg.data.source_id] = msg.data
                     logger.info("Live utterance updated")
 
             except Exception as e:
@@ -230,9 +238,11 @@ class RecordingScreen(Screen):
             return
 
         try:
+            model = self.settings.ollama_model if self.settings.use_local_llm else self.settings.gemini_model
             response = await self._insights_client.get_insight(
                 transcript=transcript_text,
                 skill_name=skill_name,
+                model=model,
             )
             byt.update_insight(skill_name, response.markdown)
         except Exception as e:
@@ -247,6 +257,9 @@ class RecordingScreen(Screen):
         """
         Format accumulated utterances into timestamped plain text.
 
+        Includes both finalized utterances and any in-progress (provisional) utterances.
+        This ensures insights have access to what's currently being said.
+
         Args:
             window_minutes: If given, only include utterances from the last N minutes.
                             None means the full session.
@@ -257,9 +270,19 @@ class RecordingScreen(Screen):
             utterances = [u for u in utterances if u.start_time >= cutoff]
 
         lines = []
+        # Add all final utterances
         for u in utterances:
             ts = datetime.fromtimestamp(u.start_time, tz=timezone.utc).strftime("%H:%M:%S")
             lines.append(f"[{ts}] {u.source_label}: {u.text}")
+
+        # Add any provisional (in-progress) utterances at the end
+        # Sort by source_id for consistent ordering
+        for source_id in sorted(self._provisional_utterances.keys()):
+            u = self._provisional_utterances[source_id]
+            ts = datetime.fromtimestamp(u.start_time, tz=timezone.utc).strftime("%H:%M:%S")
+            # Mark as in-progress so the LLM knows this is still being spoken
+            lines.append(f"[{ts}] {u.source_label} (speaking...): {u.text}")
+
         return "\n".join(lines)
 
     # ------------------------------------------------------------------
@@ -350,4 +373,3 @@ class RecordingScreen(Screen):
         if self.ws_client:
             self.ws_client.disconnect()
         await self._insights_client.close()
-

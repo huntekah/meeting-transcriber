@@ -58,6 +58,7 @@ class ActiveSession:
         sources: List[SourceConfig],
         model_manager,
         output_dir: Path | str,
+        language: str | None = None,
     ):
         """
         Initialize active session.
@@ -67,10 +68,12 @@ class ActiveSession:
             sources: List of audio sources to capture
             model_manager: ModelManager instance
             output_dir: Directory to save output files
+            language: Language code for transcription (e.g., "en", "pl", None for auto-detect)
         """
         self.session_id = session_id
         self.sources = sources
         self.model_manager = model_manager
+        self.language = language if language else "en"  # Default to English if None
 
         # Create timestamped subdirectory (YYYY-MM-DD-HH-MM)
         base_output_dir = Path(output_dir).expanduser().resolve()
@@ -141,7 +144,7 @@ class ActiveSession:
                     producer=producer,
                     whisper_model_name=self.model_manager.whisper_model_name,
                     utterance_callback=self._on_utterance,
-                    language="en",
+                    language=self.language,
                 )
                 self.pipelines.append(pipeline)
 

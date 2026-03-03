@@ -5,7 +5,14 @@ Sends transcript windows to the insights service and returns Markdown.
 """
 
 import httpx
-from cli_frontend.models import InsightRequest, InsightResponse, SkillInfo
+from cli_frontend.models import (
+    InsightRequest,
+    InsightResponse,
+    SkillInfo,
+    ListModelsResponse,
+    ModelListError,
+    ModelProvider,
+)
 from cli_frontend.logging import logger
 
 
@@ -31,6 +38,23 @@ class InsightsClient:
         except Exception as exc:
             logger.warning(f"Failed to fetch skills from insights service: {exc}")
             return []
+
+    async def get_models(self, provider: str) -> ListModelsResponse:
+        """Fetch the list of available models from the insights service."""
+        try:
+            response = await self._client.get("/models", params={"provider": provider}, timeout=5.0)
+            response.raise_for_status()
+            return ListModelsResponse.model_validate(response.json())
+        except Exception as exc:
+            logger.warning(f"Failed to fetch models from insights service: {exc}")
+            try:
+                provider_enum = ModelProvider(provider)
+            except ValueError:
+                provider_enum = ModelProvider.ollama
+            return ListModelsResponse(
+                models=[],
+                errors=[ModelListError(provider=provider_enum, message=str(exc))],
+            )
 
     async def get_insight(
         self,
@@ -75,4 +99,3 @@ class InsightsClient:
     async def close(self):
         """Close the underlying HTTP client."""
         await self._client.aclose()
-
