@@ -6,6 +6,18 @@ This directory contains experimental scripts for testing and debugging the ASR p
 
 ---
 
+## Debugging system audio (ScreenCaptureKit)
+
+If **system audio** capture works on another machine but not on yours, use:
+
+- **`debug_screencapture.py`** – Runs the ScreenCaptureKit binary and **streams stderr live** so you see permission or stream errors immediately.  
+  `python scripts/debug_screencapture.py [duration_seconds]`
+- **`test_screencapture.py`** – Full capture test with WAV output and permission hints.
+
+See **[../DEBUG_SCREENCAPTURE.md](../DEBUG_SCREENCAPTURE.md)** for a full debugging guide and checklist.
+
+---
+
 ## Live Streaming Scripts (Real-Time)
 
 ### `live_test.py` - Real-time transcription with faster-whisper
